@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'imp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=imp",
+                    "--package=imp"
+                ],
+                "filter": {
+                    "name": "imp",
+                    "kind": "bin"
+                }
+            },
+            "args": ["--datadir", "~/.imp", "--debug-level", "trace"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'imp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=imp",
+                    "--package=imp"
+                ],
+                "filter": {
+                    "name": "imp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
