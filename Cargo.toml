@@ -13,7 +13,7 @@ default = ["mothra", "eth2-libp2p"]
 local = ["mothra-local", "eth2-libp2p-local"]
 
 [dependencies]
-mothra = { git = "https://github.com/prrkl/mothra", branch = "imp-mods", optional = true }
+mothra = { git = "https://github.com/prrkl/mothra", rev = "1122d923a9d1f77ff5610ea6738f2850398f90b4", package = "mothra", optional = true }
 mothra-local = { path = "../mothra", package = "mothra", optional = true }
 eth2-libp2p = { git = "https://github.com/jrhea/lighthouse", rev = "8eb1f6556a9f8ed72016b5a1776574a522073fd7", package = "eth2-libp2p", optional = true }
 eth2-libp2p-local = { path = "../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
