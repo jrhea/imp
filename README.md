@@ -84,53 +84,50 @@ Here is a glimpse of the available options:
 
 ```
 > imp -h
-imp v0.1.0
+imp 0.1.0
+Jonny Rhea
+Eth2 Network Agent
 
 USAGE:
-    imp [FLAGS] [OPTIONS]
+    imp [SUBCOMMAND]
 
 FLAGS:
-    -d, --disable-enr-auto-update
-            This fixes the ENR's IP/PORT to whatever is specified at startup.
-            
-    -h, --help
-            Prints help information.
+    -h, --help       Prints help information
+    -V, --version    Prints version information
 
-    -V, --version
-            Prints version information.
+SUBCOMMANDS:
+    help      Prints this message or the help of the given subcommand(s)
+    mothra    P2P networking component.
 
-    -a, --auto-ports
-            Allow the OS to select from available TCP/UDP ports.
 
+
+> imp mothra -h
+imp-mothra 0.1.0
+P2P networking component.
+
+USAGE:
+    imp mothra [FLAGS] [OPTIONS]
+
+FLAGS:
+    -a, --auto-ports                 Allow the OS to select from available TCP/UDP ports.
+    -d, --disable-enr-auto-update    This fixes the ENR's IP/PORT to whatever is specified at startup.
+    -h, --help                       Prints help information
+    -V, --version                    Prints version information
 
 OPTIONS:
-        --boot-nodes <ENR-LIST>
-            One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.
+        --boot-nodes <ENR-LIST>           One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.
+        --datadir <DIR>                   The location of the data directory to use.
+        --debug-level <LEVEL>             Log filter. [default: info]  [possible values: info, debug, trace, warn,
+                                          error, crit]
+        --discovery-port <PORT>           The discovery UDP port.
+        --libp2p-addresses <MULTIADDR>    One or more comma-delimited multiaddrs to manually connect to a libp2p peer
+                                          without an ENR.
+        --listen-address <ADDRESS>        The address the client will listen for UDP and TCP connections. [default:
+                                          127.0.0.1]
+        --maxpeers <maxpeers>             The maximum number of peers. [default: 10]
+        --port <PORT>                     The TCP/UDP port to listen on. [default: 9000]
+        --topics <STRING>                 One or more comma-delimited gossipsub topics to subscribe to.
 
-        --datadir <DIR>
-            The location of the data directory to use.
-
-        --debug-level <LEVEL>
-            Specifies what log records are displayed. [possible values: info, debug, trace,
-            warn, error, crit]
-
-        --discovery-port <PORT>
-            The discovery UDP port.
-
-        --libp2p-addresses <MULTIADDR>
-            One or more comma-delimited multiaddrs to manually connect to a libp2p peer without an ENR.
-
-        --listen-address <ADDRESS>
-            The address the client will listen for UDP and TCP connections. [default: 127.0.0.1]
-
-        --maxpeers <maxpeers>
-            The maximum number of peers. [default: 10]
-
-        --port <PORT>
-            The TCP/UDP port to listen on. [default: 9000]
-
-        --topics <STRING>
-            One or more comma-delimited gossipsub topics to subscribe to.
 ```
 
 
