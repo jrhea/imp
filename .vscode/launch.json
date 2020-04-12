@@ -16,7 +16,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["--datadir", "~/.imp", "--debug-level", "trace"],
+            "args": ["mothra","--datadir", "~/.imp", "--debug-level", "trace"],
             "cwd": "${workspaceFolder}"
         },
         {
