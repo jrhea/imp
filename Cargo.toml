@@ -13,7 +13,7 @@ default = ["mothra", "eth2-libp2p"]
 local = ["mothra-local", "eth2-libp2p-local"]
 
 [dependencies]
-mothra = { git = "https://github.com/prrkl/mothra", rev = "3e289e3adff32060f5ef0de42027e428829168dd", package = "mothra", optional = true }
+mothra = { git = "https://github.com/prrkl/mothra", rev = "12d0219694985ef6df94ed15dd4d7534c01950ae", package = "mothra", optional = true }
 mothra-local = { path = "../mothra", package = "mothra", optional = true }
 eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
 eth2-libp2p-local = { path = "../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
@@ -21,6 +21,7 @@ eth2-libp2p-local = { path = "../lighthouse/beacon_node/eth2-libp2p", package = 
 tokio = "0.1.16"
 slog = { version = "^2.2.3" , features = ["max_level_trace"] }
 target_info = "0.1.0"
+clap = "2.33.0"
 
 [patch.crates-io]
 tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "tree_hash" }
