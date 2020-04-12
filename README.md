@@ -80,6 +80,10 @@ This is an option for developers.  It is a convenient was to reference packages,
 
 ```
 
+Here's a screenshot of the demo script running: 
+
+![imp](https://github.com/prrkl/docs/blob/master/resources/imp.png)
+
 Here is a glimpse of the available options:
 
 ```
