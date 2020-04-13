@@ -1,0 +1,20 @@
+[package]
+name = "imp-p2p"
+version = "0.1.0"
+authors = ["jonny rhea <jonny.rhea@consensys.com>"]
+edition = "2018"
+
+[features]
+default = ["mothra", "eth2-libp2p"]
+local = ["mothra-local", "eth2-libp2p-local"]
+
+[dependencies]
+mothra = { git = "https://github.com/prrkl/mothra", rev = "40174836493b184732a21987d54aa3447aa9b135", package = "mothra", optional = true }
+mothra-local = { path = "../../mothra/core", package = "mothra", optional = true }
+eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
+eth2-libp2p-local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
+
+tokio = "0.1.16"
+slog = { version = "^2.2.3" , features = ["max_level_trace"] }
+target_info = "0.1.0"
+clap = "2.33.0"

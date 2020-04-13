@@ -1,0 +1,10 @@
+[package]
+name = "imp-network"
+version = "0.1.0"
+authors = ["jonny rhea <jonny.rhea@consensys.com>"]
+edition = "2018"
+
+
+[dependencies]
+p2p = { path = "p2p", package="imp-p2p"}
+tokio = { version = "0.2", features = ["full"] }
