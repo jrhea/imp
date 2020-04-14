@@ -10,24 +10,13 @@ use tokio::{runtime, signal, task, time};
 
 use p2p::P2PService;
 
-pub struct Service {
-    p2p_service: Arc<P2PService>,
-}
+pub struct Service {}
 
 impl Service {
-    pub fn new(
-        client_name: String,
-        platform: String,
-        protocol_version: String,
-        arg_matches: &ArgMatches<'_>,
-    ) -> Arc<Self> {
-        Arc::new(Service {
-            p2p_service: P2PService::new(client_name, platform, protocol_version, &arg_matches),
-        })
+    pub fn new() -> Arc<Self> {
+        Arc::new(Service {})
     }
     pub async fn spawn(&self, mut rx: mpsc::UnboundedReceiver<Message>) {
-        let p2p_service = self.p2p_service.clone();
-        task::spawn(async move { p2p_service.spawn().await });
         task::spawn(async move {
             match rx.recv().await {
                 Some(Message::Command) => {

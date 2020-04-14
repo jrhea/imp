@@ -1,8 +1,10 @@
 SHELL := /bin/sh
 
-.PHONY: debug local release clean
+.PHONY: all debug local release mock-node fmt clean
 
-.DEFAULT: debug
+.DEFAULT: all
+
+all: debug mock-node
 
 debug:
 	cargo build
@@ -22,7 +24,8 @@ fmt:
 	cd datatypes && cargo fmt
 	cd network && cargo fmt
 	cd network/p2p && cargo fmt
-	cd sim-mock-node && cargo fmt
+	cd sim/mock-node && cargo fmt
 
 clean:
 	cargo clean
+	cd sim-mock-node && cargo clean

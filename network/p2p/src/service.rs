@@ -1,10 +1,14 @@
 use clap::ArgMatches;
+use futures::{sync::oneshot, Future};
+use std::any::type_name;
+use std::cell::RefCell;
 use std::sync::Arc;
 use std::{thread, time};
 use tokio::runtime::Runtime;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 use crate::types::topics::create_topics;
+use crate::types::FORK_DIGEST;
 use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 #[cfg(feature = "local")]
 use eth2_libp2p_local as eth2_libp2p;
@@ -14,14 +18,13 @@ use mothra::{
 };
 #[cfg(feature = "local")]
 use mothra_local as mothra;
-use crate::types::FORK_DIGEST;
 
 // Holds variables needed to interacts with mothra
 pub struct Service {
     runtime: Runtime,
     network_globals: Arc<NetworkGlobals>,
     network_send: mpsc::UnboundedSender<NetworkMessage>,
-    pub network_exit: Arc<oneshot::Sender<()>>,
+    pub network_exit: Arc<tokio::sync::oneshot::Sender<()>>,
     log: slog::Logger,
 }
 
@@ -31,7 +34,7 @@ impl Service {
         platform: String,
         protocol_version: String,
         arg_matches: &ArgMatches<'_>,
-    ) -> Arc<Self> {
+    ) -> Self {
         let mut config = Mothra::get_config(
             Some(client_name),
             Some(platform),
@@ -53,36 +56,32 @@ impl Service {
             on_receive_rpc,
         )
         .unwrap();
-        Arc::new(Service {
+        Service {
             runtime,
             network_globals,
             network_send,
             network_exit: Arc::new(network_exit),
             log,
-        })
+        }
     }
 
-    pub async fn spawn(&self) -> Result<(), std::io::Error> {
-        let start = time::Instant::now();
-        let dur = time::Duration::from_secs(5);
-        loop {
-            thread::sleep(dur);
-            let data = format!("Hello from imp.  Elapsed time: {:?}", start.elapsed())
-                .as_bytes()
-                .to_vec();
-            gossip(
-                self.network_send.clone(),
-                GossipTopic::new(
-                    GossipKind::BeaconBlock,
-                    GossipEncoding::default(),
-                    FORK_DIGEST,
-                )
-                .into(),
-                data,
-                self.log.clone(),
-            );
-        }
-        Ok(()) as Result<(), std::io::Error>
+    pub async fn spawn(&mut self) {
+        let (ctrlc_send, ctrlc_oneshot) = oneshot::channel();
+        let ctrlc_send_c = RefCell::new(Some(ctrlc_send));
+        ctrlc::set_handler(move || {
+            if let Some(ctrlc_send) = ctrlc_send_c.try_borrow_mut().unwrap().take() {
+                ctrlc_send.send(()).expect("Error sending ctrl-c message");
+            }
+        })
+        .map_err(|e| format!("Could not set ctrlc handler: {:?}", e))
+        .unwrap();
+
+        // Block this thread until Crtl+C is pressed.
+        self.runtime
+            .block_on(ctrlc_oneshot)
+            .map_err(|e| format!("Ctrlc oneshot failed: {:?}", e));
+
+        println!("{:?}: shutdown message received.", type_name::<Service>());
     }
 }
 

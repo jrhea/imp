@@ -13,7 +13,7 @@ use mothra_local as mothra;
 use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 use mothra::{cli_app, config::Config, gossip, rpc_request, rpc_response, Mothra, NetworkMessage};
 
-use p2p::{P2PService,FORK_DIGEST,topics};
+use p2p::{topics, P2PService, FORK_DIGEST};
 
 const CLIENT_NAME: &str = "mock-node";
 const PROTOCOL_VERSION: &str = "imp/libp2p";
@@ -41,7 +41,6 @@ fn main() {
     );
 
     config.network_config.topics = topics::create_topics(FORK_DIGEST);
-
 
     let (network_globals, network_send, network_exit, network_logger) = Mothra::new(
         config,

@@ -35,14 +35,17 @@ fn main() -> Result<(), std::io::Error> {
     let protocol_version: String = PROTOCOL_VERSION.into();
 
     let mut runtime = runtime::Runtime::new()?;
-    let network_service =
-        NetworkService::new(client_name, platform, protocol_version, &arg_matches);
+    let mut p2p_service = P2PService::new(client_name, platform, protocol_version, &arg_matches);
+    let network_service = NetworkService::new();
     let agent = Agent::new(network_service.clone());
     let (network_tx, network_rx) = mpsc::unbounded_channel::<Message>();
     let (agent_tx, agent_rx) = mpsc::unbounded_channel::<Message>();
 
     runtime.block_on(async move {
         async move {
+            task::spawn(async move {
+                p2p_service.spawn().await;
+            });
             network_service.spawn(network_rx).await;
             agent.spawn(agent_rx).await;
         }
