@@ -14,8 +14,7 @@ use mothra::{
 };
 #[cfg(feature = "local")]
 use mothra_local as mothra;
-
-const FORK_DIGEST: [u8; 4] = [0; 4];
+use crate::types::FORK_DIGEST;
 
 // Holds variables needed to interacts with mothra
 pub struct Service {
