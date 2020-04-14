@@ -3,20 +3,20 @@ extern crate target_info;
 extern crate error_chain;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use futures::executor::block_on;
+use futures::future::{AbortHandle, Abortable, Aborted};
 use slog::{debug, info, o, warn, Drain};
 use std::cell::RefCell;
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::{runtime, signal, sync, task, time};
 use tokio::process::Command;
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tokio::sync::oneshot;
-use futures::future::{Abortable, AbortHandle, Aborted};
+use tokio::{runtime, signal, sync, task, time};
 
 use agent::Agent;
+use datatypes::Message;
 use network::NetworkService;
 use p2p::{cli_app, P2PService};
-use datatypes::Env;
 
 const CLIENT_NAME: &str = "imp";
 const PROTOCOL_VERSION: &str = "imp/libp2p";
@@ -35,27 +35,26 @@ fn main() -> Result<(), std::io::Error> {
     let protocol_version: String = PROTOCOL_VERSION.into();
 
     let mut runtime = runtime::Runtime::new()?;
-    let network_service = NetworkService::new(client_name, platform, protocol_version, &arg_matches);
+    let network_service =
+        NetworkService::new(client_name, platform, protocol_version, &arg_matches);
     let agent = Agent::new(network_service.clone());
-    let (network_shutdown_tx, network_shutdown_rx) = oneshot::channel::<()>();
-    let (agent_shutdown_tx, agent_shutdown_rx) = oneshot::channel::<()>();
+    let (network_tx, network_rx) = mpsc::unbounded_channel::<Message>();
+    let (agent_tx, agent_rx) = mpsc::unbounded_channel::<Message>();
 
     runtime.block_on(async move {
-        
         async move {
-            network_service.spawn(network_shutdown_rx).await;
-            agent.spawn(agent_shutdown_rx).await;
-        }.await;
+            network_service.spawn(network_rx).await;
+            agent.spawn(agent_rx).await;
+        }
+        .await;
         // block the current thread until Ctrl+C is received.
-        signal::ctrl_c().await.expect("failed to listen for event");       
-
+        signal::ctrl_c().await.expect("failed to listen for event");
     });
     println!("Sending shutdown signal.");
-    network_shutdown_tx.send(()); 
-    agent_shutdown_tx.send(()); 
+    network_tx.send(Message::Shutdown);
+    agent_tx.send(Message::Shutdown);
     runtime.shutdown_timeout(Duration::from_millis(1000));
     println!("Exiting imp.");
-    
 
     Ok(())
 }

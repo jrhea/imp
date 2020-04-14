@@ -31,12 +31,12 @@ pub fn create_topics(fork_digest: [u8; 4]) -> Vec<String> {
         fork_digest,
     )
     .into();
- 
+
     vec![
-         beacon_block_topic.clone(),
-         beacon_aggregate_and_proof_topic.clone(),
-         voluntary_exit_topic.clone(),
-         proposer_slashing_topic.clone(),
-         attester_slashing_topic.clone(),
-     ]
+        beacon_block_topic.clone(),
+        beacon_aggregate_and_proof_topic.clone(),
+        voluntary_exit_topic.clone(),
+        proposer_slashing_topic.clone(),
+        attester_slashing_topic.clone(),
+    ]
 }
