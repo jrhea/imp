@@ -1,16 +1,19 @@
 use clap::ArgMatches;
+use std::sync::Arc;
+use std::{thread, time};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc, oneshot};
-use std::{thread, time};
-use std::sync::Arc;
 
+use crate::types::topics::create_topics;
+use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 #[cfg(feature = "local")]
 use eth2_libp2p_local as eth2_libp2p;
+use mothra::{
+    cli_app, config::Config, gossip, rpc_request, rpc_response, Mothra, NetworkGlobals,
+    NetworkMessage,
+};
 #[cfg(feature = "local")]
 use mothra_local as mothra;
-use mothra::{config::Config, gossip, rpc_request, rpc_response, Mothra, NetworkMessage, NetworkGlobals, cli_app};
-use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
-use crate::types::topics::create_topics;
 
 const FORK_DIGEST: [u8; 4] = [0; 4];
 
@@ -23,21 +26,25 @@ pub struct Service {
     log: slog::Logger,
 }
 
-
 impl Service {
-    pub fn new(client_name: String, platform: String, protocol_version: String, arg_matches: &ArgMatches<'_>) -> Arc<Self> {
+    pub fn new(
+        client_name: String,
+        platform: String,
+        protocol_version: String,
+        arg_matches: &ArgMatches<'_>,
+    ) -> Arc<Self> {
         let mut config = Mothra::get_config(
             Some(client_name),
             Some(platform),
             Some(protocol_version),
             &arg_matches.subcommand_matches("mothra").unwrap(),
         );
-        
+
         config.network_config.topics = create_topics(FORK_DIGEST);
 
         let runtime = Runtime::new()
-        .map_err(|e| format!("Failed to start runtime: {:?}", e))
-        .unwrap();
+            .map_err(|e| format!("Failed to start runtime: {:?}", e))
+            .unwrap();
 
         let (network_globals, network_send, network_exit, log) = Mothra::new(
             config,
@@ -47,15 +54,13 @@ impl Service {
             on_receive_rpc,
         )
         .unwrap();
-        Arc::new(
-            Service {
-                runtime,
-                network_globals,
-                network_send,
-                network_exit: Arc::new(network_exit),
-                log
-            }
-        )
+        Arc::new(Service {
+            runtime,
+            network_globals,
+            network_send,
+            network_exit: Arc::new(network_exit),
+            log,
+        })
     }
 
     pub async fn spawn(&self) -> Result<(), std::io::Error> {
@@ -80,9 +85,7 @@ impl Service {
         }
         Ok(()) as Result<(), std::io::Error>
     }
-
 }
-
 
 fn on_discovered_peer(peer: String) {
     //println!("{}: discovered peer", CLIENT_NAME);

@@ -13,5 +13,12 @@ local:
 release:
 	cargo build --release
 
+fmt:
+	cargo fmt
+	cd agent && cargo fmt
+	cd datatypes && cargo fmt
+	cd network && cargo fmt
+	cd network/p2p && cargo fmt
+
 clean:
 	cargo clean
