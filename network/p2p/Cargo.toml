@@ -14,8 +14,9 @@ mothra-local = { path = "../../mothra/core", package = "mothra", optional = true
 eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
 eth2-libp2p-local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
 
-tokio = "0.1.16"
+tokio = "0.1.22"
 slog = { version = "^2.2.3" , features = ["max_level_trace"] }
 target_info = "0.1.0"
 clap = "2.33.0"
-futures = "0.3"
+ctrlc = { version = "3.1.1", features = ["termination"] }
+futures = "0.1.25"
