@@ -7,4 +7,7 @@ edition = "2018"
 
 [dependencies]
 p2p = { path = "p2p", package="imp-p2p"}
+datatypes = { path = "../datatypes", package="imp-datatypes"}
 tokio = { version = "0.2", features = ["full"] }
+clap = "2.33.0"
+futures = "0.3"

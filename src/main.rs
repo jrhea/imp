@@ -5,18 +5,18 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use futures::executor::block_on;
 use slog::{debug, info, o, warn, Drain};
 use std::cell::RefCell;
-use std::sync::Arc;
-use std::sync::Weak;
-use target_info::Target;
-
+use std::sync::{Arc,Mutex};
 use std::time::Duration;
+use tokio::{runtime, signal, sync, task, time};
 use tokio::process::Command;
 use tokio::task::JoinHandle;
-use tokio::{runtime, signal, sync, task, time};
+use tokio::sync::oneshot;
+use futures::future::{Abortable, AbortHandle, Aborted};
 
 use agent::Agent;
 use network::NetworkService;
 use p2p::{cli_app, P2PService};
+use datatypes::Env;
 
 const CLIENT_NAME: &str = "imp";
 const PROTOCOL_VERSION: &str = "imp/libp2p";
@@ -34,36 +34,28 @@ fn main() -> Result<(), std::io::Error> {
     let platform: String = format!("v{}", env!("CARGO_PKG_VERSION"));
     let protocol_version: String = PROTOCOL_VERSION.into();
 
-    let p2p_service = P2PService::new(client_name, platform, protocol_version, &arg_matches);
-    let network_service = NetworkService::new(p2p_service.clone());
-    let agent = Agent::new(network_service.clone());
     let mut runtime = runtime::Runtime::new()?;
+    let network_service = NetworkService::new(client_name, platform, protocol_version, &arg_matches);
+    let agent = Agent::new(network_service.clone());
+    let (network_shutdown_tx, network_shutdown_rx) = oneshot::channel::<()>();
+    let (agent_shutdown_tx, agent_shutdown_rx) = oneshot::channel::<()>();
 
     runtime.block_on(async move {
-        task::spawn(async move {
-            runner(p2p_service, network_service, agent).await;
-        });
-        signal::ctrl_c().await.expect("failed to listen for event");
+        
+        async move {
+            network_service.spawn(network_shutdown_rx).await;
+            agent.spawn(agent_shutdown_rx).await;
+        }.await;
+        // block the current thread until Ctrl+C is received.
+        signal::ctrl_c().await.expect("failed to listen for event");       
+
     });
-
-    println!("Shutting down");
+    println!("Sending shutdown signal.");
+    network_shutdown_tx.send(()); 
+    agent_shutdown_tx.send(()); 
     runtime.shutdown_timeout(Duration::from_millis(1000));
-    Ok(())
-}
+    println!("Exiting imp.");
+    
 
-async fn runner(
-    p2p_service: Arc<P2PService>,
-    network_service: Arc<NetworkService>,
-    agent: Arc<Agent>,
-) -> Result<(), std::io::Error> {
-    let mut tasks = vec![];
-
-    tasks.push(task::spawn(async move { p2p_service.spawn().await }));
-    tasks.push(task::spawn(async move { network_service.spawn().await }));
-    tasks.push(task::spawn(async move { agent.spawn().await }));
-
-    for task in tasks {
-        task.await??;
-    }
     Ok(())
 }

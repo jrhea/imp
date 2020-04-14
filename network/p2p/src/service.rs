@@ -1,4 +1,4 @@
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::ArgMatches;
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc, oneshot};
 use std::{thread, time};
@@ -19,7 +19,7 @@ pub struct Service {
     runtime: Runtime,
     network_globals: Arc<NetworkGlobals>,
     network_send: mpsc::UnboundedSender<NetworkMessage>,
-    network_exit: oneshot::Sender<()>,
+    pub network_exit: Arc<oneshot::Sender<()>>,
     log: slog::Logger,
 }
 
@@ -52,7 +52,7 @@ impl Service {
                 runtime,
                 network_globals,
                 network_send,
-                network_exit,
+                network_exit: Arc::new(network_exit),
                 log
             }
         )

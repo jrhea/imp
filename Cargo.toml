@@ -13,6 +13,7 @@ include = [
 network = { path = "network", package="imp-network"}
 p2p = { path = "network/p2p", package="imp-p2p"}
 agent = { path = "agent", package="imp-agent"}
+datatypes = { path = "datatypes", package="imp-datatypes"}
 
 tokio = { version = "0.2", features = ["full"] }
 slog = { version = "^2.2.3" , features = ["max_level_trace"] }
