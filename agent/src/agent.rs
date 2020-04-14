@@ -1,7 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time;
-
+use tokio::{runtime, time, task, signal};
+use tokio::sync::oneshot;
+use futures::future::{Abortable, AbortHandle, Aborted};
 use network::{NetworkService};
 
 pub struct Agent {
@@ -17,12 +18,11 @@ impl Agent {
         )
     }
 
-    pub async fn spawn(&self) -> Result<(), std::io::Error> {
-        let mut interval = time::interval(Duration::from_secs(1));
-        loop {
-            interval.tick().await;
-            println!("Agent is awake.")
-        }
-        Ok(()) as Result<(), std::io::Error>
+    pub async fn spawn(&self, rx: oneshot::Receiver<()>) {
+        task::spawn(async move {          
+            if let Ok(()) = rx.await {
+                println!("Agent: shutdown signal received.");
+            } 
+        });
     }
 }

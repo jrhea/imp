@@ -18,3 +18,4 @@ tokio = "0.1.16"
 slog = { version = "^2.2.3" , features = ["max_level_trace"] }
 target_info = "0.1.0"
 clap = "2.33.0"
+futures = "0.3"

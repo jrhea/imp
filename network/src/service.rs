@@ -1,7 +1,12 @@
 use std::time::Duration;
-use tokio::time;
 use std::sync::Arc;
-use std::sync::Weak;
+use tokio::{runtime, time, task, signal};
+use tokio::sync::oneshot;
+use futures::future::{Abortable, AbortHandle, Aborted, TryFutureExt};
+use clap::ArgMatches;
+use futures::future;
+use datatypes::Env;
+
 
 use p2p::P2PService;
 
@@ -10,20 +15,20 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn new(p2p_service: Arc<P2PService>) -> Arc<Self> {
+    pub fn new(client_name: String, platform: String, protocol_version: String, arg_matches: &ArgMatches<'_>) -> Arc<Self> {
         Arc::new(
             Service {
-                p2p_service
+                p2p_service: P2PService::new(client_name, platform, protocol_version, &arg_matches),
             }
         )
     }
-
-    pub async fn spawn(&self) -> Result<(), std::io::Error> {
-        let mut interval = time::interval(Duration::from_secs(1));
-        loop {
-            interval.tick().await;
-            println!("Network Service is awake.")
-        }
-        Ok(()) as Result<(), std::io::Error>
+pub async fn spawn(&self, rx: oneshot::Receiver<()>) {
+        let p2p_service = self.p2p_service.clone();
+        task::spawn(async move { p2p_service.spawn().await });
+        task::spawn(async move {          
+            if let Ok(()) = rx.await {
+                println!("Network Service: shutdown signal received.");
+            } 
+        });
     }
 }
