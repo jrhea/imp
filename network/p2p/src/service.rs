@@ -9,6 +9,7 @@ use tokio::sync::mpsc;
 
 use crate::types::topics::create_topics;
 use crate::types::FORK_DIGEST;
+use datatypes::Message;
 use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 #[cfg(feature = "local")]
 use eth2_libp2p_local as eth2_libp2p;
@@ -65,23 +66,16 @@ impl Service {
         }
     }
 
-    pub async fn spawn(&mut self) {
-        let (ctrlc_send, ctrlc_oneshot) = oneshot::channel();
-        let ctrlc_send_c = RefCell::new(Some(ctrlc_send));
-        ctrlc::set_handler(move || {
-            if let Some(ctrlc_send) = ctrlc_send_c.try_borrow_mut().unwrap().take() {
-                ctrlc_send.send(()).expect("Error sending ctrl-c message");
+    pub async fn spawn(&mut self, mut rx: tokio2::sync::mpsc::UnboundedReceiver<Message>) {
+        match rx.recv().await {
+            Some(Message::Network) => {
+                println!("{:?}: network message received.", type_name::<Service>());
             }
-        })
-        .map_err(|e| format!("Could not set ctrlc handler: {:?}", e))
-        .unwrap();
-
-        // Block this thread until Crtl+C is pressed.
-        self.runtime
-            .block_on(ctrlc_oneshot)
-            .map_err(|e| format!("Ctrlc oneshot failed: {:?}", e));
-
-        println!("{:?}: shutdown message received.", type_name::<Service>());
+            Some(Message::Shutdown) => {
+                println!("{:?}: shutdown message received.", type_name::<Service>());
+            }
+            _ => (),
+        };
     }
 }
 
