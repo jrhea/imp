@@ -6,10 +6,10 @@ use crate::types::topics::create_topics;
 use crate::types::FORK_DIGEST;
 use datatypes::Message;
 
-#[cfg(feature = "local")]
-use mothra_local::{ Mothra, NetworkGlobals, NetworkMessage};
 #[cfg(not(feature = "local"))]
-use mothra::{ Mothra, NetworkGlobals, NetworkMessage};
+use mothra::{Mothra, NetworkGlobals, NetworkMessage};
+#[cfg(feature = "local")]
+use mothra_local::{Mothra, NetworkGlobals, NetworkMessage};
 
 // Holds variables needed to interacts with mothra
 pub struct Service {
