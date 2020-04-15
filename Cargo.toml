@@ -8,6 +8,10 @@ include = [
     "Cargo.toml"
 ]
 
+[features]
+default = []
+local = ["p2p/local"]
+
 
 [dependencies]
 network = { path = "network", package="imp-network"}
@@ -15,13 +19,15 @@ p2p = { path = "network/p2p", package="imp-p2p"}
 agent = { path = "agent", package="imp-agent"}
 datatypes = { path = "datatypes", package="imp-datatypes"}
 
-tokio = { version = "0.2", features = ["full"] }
-slog = { version = "^2.2.3" , features = ["max_level_trace"] }
+tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
+tokio-01 = { version = "0.1.22", package = "tokio"}
+tokio-compat = { version = "0.1.5", features = ["rt-full"] }
+slog = { version = "2.5.2" , features = ["max_level_trace"] }
 target_info = "0.1.0"
 clap = "2.33.0"
 error-chain = "0.12.1"
 futures = "0.3"
-ctrlc = { version = "3.1.1", features = ["termination"] }
+
 
 [patch.crates-io]
 tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "tree_hash" }

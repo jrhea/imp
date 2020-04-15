@@ -1,3 +1,6 @@
+#[cfg(feature = "local")]
+use eth2_libp2p_local::types::{GossipEncoding, GossipKind, GossipTopic};
+#[cfg(not(feature = "local"))]
 use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 
 pub fn create_topics(fork_digest: [u8; 4]) -> Vec<String> {

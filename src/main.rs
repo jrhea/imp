@@ -4,8 +4,9 @@ extern crate error_chain;
 use clap::App;
 use slog::{debug, info, o, warn, Drain};
 use std::time::Duration;
-use tokio::sync::watch;
-use tokio::{runtime, signal, sync, task, time};
+use tokio_02::sync::watch;
+use tokio_02::{signal, task, time};
+use tokio_01::prelude::future::Future;
 
 use agent::Agent;
 use datatypes::Message;
@@ -28,13 +29,15 @@ fn main() -> Result<(), std::io::Error> {
     let platform: String = format!("v{}", env!("CARGO_PKG_VERSION"));
     let protocol_version: String = PROTOCOL_VERSION.into();
 
-    let mut runtime = runtime::Runtime::new()?;
-    let mut p2p_service = P2PService::new(client_name, platform, protocol_version, &arg_matches);
+
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    let p2p_service = P2PService::new(&runtime.executor(), client_name, platform, protocol_version, &arg_matches);
     let network_service = NetworkService::new();
     let agent = Agent::new(network_service.clone());
-    let (shutdown_tx, shutdown_rx) = watch::channel::<Message>(Message::None);
 
-    runtime.block_on(async move {
+
+    runtime.block_on_std(async move {
+        let (shutdown_tx, shutdown_rx) = watch::channel::<Message>(Message::None);
         async move {
             let rx = shutdown_rx.clone();
             task::spawn(async move {
@@ -46,10 +49,15 @@ fn main() -> Result<(), std::io::Error> {
         .await;
         // block the current thread until Ctrl+C is received.
         signal::ctrl_c().await.expect("failed to listen for event");
+        println!("Sending shutdown signal.");
+        let _ = shutdown_tx.broadcast(Message::Shutdown);
     });
-    println!("Sending shutdown signal.");
-    shutdown_tx.broadcast(Message::Shutdown);
-    runtime.shutdown_timeout(Duration::from_millis(1000));
+
+    // Shutdown the runtime
+    runtime.shutdown_on_idle()
+        .wait()
+        .unwrap();
+
     println!("Exiting imp.");
 
     Ok(())
