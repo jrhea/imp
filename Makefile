@@ -7,6 +7,7 @@ SHELL := /bin/sh
 all: debug mock-node
 
 debug:
+	cargo update -p https://github.com/prrkl/mothra#0.1.0
 	cargo build
 
 local:
@@ -16,6 +17,7 @@ release:
 	cargo build --release
 
 mock-node:
+	cd sim/mock-node && cargo update -p https://github.com/prrkl/mothra#0.1.0
 	cd sim/mock-node && cargo build
 
 fmt:

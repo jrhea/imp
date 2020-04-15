@@ -1,8 +1,9 @@
 extern crate target_info;
 #[macro_use]
 extern crate error_chain;
-use clap::App;
-use slog::{debug, info, o, warn, Drain};
+use clap::{App, Arg};
+use env_logger::Env;
+use slog::{debug, info, o, trace, warn, Drain, Level, Logger};
 use std::time::Duration;
 use tokio_01::prelude::future::Future;
 use tokio_02::sync::watch;
@@ -22,8 +23,39 @@ fn main() -> Result<(), std::io::Error> {
         .version(clap::crate_version!())
         .author("Jonny Rhea")
         .about("Eth2 Network Agent")
+        .arg(
+            Arg::with_name("debug-level")
+                .long("debug-level")
+                .value_name("LEVEL")
+                .help("Log filter.")
+                .takes_value(true)
+                .possible_values(&["info", "debug", "trace", "warn", "error", "crit"])
+                .default_value("info"),
+        )
         .subcommand(cli_app())
         .get_matches();
+
+    let debug_level = arg_matches
+        .value_of("debug-level")
+        .ok_or_else(|| "Expected --debug-level flag".to_string())
+        .unwrap();
+
+    // configure logging
+    env_logger::Builder::from_env(Env::default()).init();
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build();
+    let drain = match debug_level {
+        "info" => drain.filter_level(Level::Info),
+        "debug" => drain.filter_level(Level::Debug),
+        "trace" => drain.filter_level(Level::Trace),
+        "warn" => drain.filter_level(Level::Warning),
+        "error" => drain.filter_level(Level::Error),
+        "crit" => drain.filter_level(Level::Critical),
+        _ => drain.filter_level(Level::Info),
+    };
+    let slog = Logger::root(drain.fuse(), o!());
+    let log = slog.new(o!("imp" => "imp"));
 
     let client_name: String = CLIENT_NAME.into();
     let platform: String = format!("v{}", env!("CARGO_PKG_VERSION"));
@@ -36,6 +68,7 @@ fn main() -> Result<(), std::io::Error> {
         platform,
         protocol_version,
         &arg_matches,
+        log.new(o!("imp" => "P2PService")),
     );
     let network_service = NetworkService::new();
     let agent = Agent::new(network_service.clone());

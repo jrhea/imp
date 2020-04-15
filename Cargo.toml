@@ -22,7 +22,10 @@ datatypes = { path = "datatypes", package="imp-datatypes"}
 tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
 tokio-01 = { version = "0.1.22", package = "tokio"}
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
+slog-term = "^2.4.0"
+slog-async = "^2.3.0"
 slog = { version = "2.5.2" , features = ["max_level_trace"] }
+env_logger = "0.6.0"
 target_info = "0.1.0"
 clap = "2.33.0"
 error-chain = "0.12.1"
@@ -39,3 +42,6 @@ types = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4c
 eth2_hashing = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2_hashing" }
 eth2-libp2p = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2-libp2p", optional = true }
 
+#c5416fa11646d68106107b902486840054d0daa6
+#[patch."https://github.com/prrkl/mothra.git"]
+#mothra = { git = "https://github.com/prrkl/mothra", rev= "c5416fa11646d68106107b902486840054d0daa6", package = "mothra", optional = true }
