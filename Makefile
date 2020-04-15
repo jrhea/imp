@@ -28,4 +28,4 @@ fmt:
 
 clean:
 	cargo clean
-	cd sim-mock-node && cargo clean
+	cd sim/mock-node && cargo clean

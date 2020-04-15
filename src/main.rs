@@ -4,9 +4,9 @@ extern crate error_chain;
 use clap::App;
 use slog::{debug, info, o, warn, Drain};
 use std::time::Duration;
+use tokio_01::prelude::future::Future;
 use tokio_02::sync::watch;
 use tokio_02::{signal, task, time};
-use tokio_01::prelude::future::Future;
 
 use agent::Agent;
 use datatypes::Message;
@@ -29,12 +29,16 @@ fn main() -> Result<(), std::io::Error> {
     let platform: String = format!("v{}", env!("CARGO_PKG_VERSION"));
     let protocol_version: String = PROTOCOL_VERSION.into();
 
-
     let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    let p2p_service = P2PService::new(&runtime.executor(), client_name, platform, protocol_version, &arg_matches);
+    let p2p_service = P2PService::new(
+        &runtime.executor(),
+        client_name,
+        platform,
+        protocol_version,
+        &arg_matches,
+    );
     let network_service = NetworkService::new();
     let agent = Agent::new(network_service.clone());
-
 
     runtime.block_on_std(async move {
         let (shutdown_tx, shutdown_rx) = watch::channel::<Message>(Message::None);
@@ -54,9 +58,7 @@ fn main() -> Result<(), std::io::Error> {
     });
 
     // Shutdown the runtime
-    runtime.shutdown_on_idle()
-        .wait()
-        .unwrap();
+    runtime.shutdown_on_idle().wait().unwrap();
 
     println!("Exiting imp.");
 

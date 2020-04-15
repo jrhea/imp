@@ -10,7 +10,7 @@ local = ["mothra-local", "eth2-libp2p-local"]
 
 [dependencies]
 datatypes = { path = "../../datatypes", package="imp-datatypes"}
-mothra = { git = "https://github.com/prrkl/mothra", rev = "40174836493b184732a21987d54aa3447aa9b135", package = "mothra", optional = true }
+mothra = { git = "https://github.com/prrkl/mothra", rev = "3a97a2147f82b690d61c42fe511a58c511d19e00", package = "mothra", optional = true }
 mothra-local = { path = "../../../mothra/core", package = "mothra", optional = true }
 eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
 eth2-libp2p-local = { path = "../../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }

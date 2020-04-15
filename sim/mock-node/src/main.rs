@@ -2,7 +2,7 @@ extern crate target_info;
 use clap::App;
 use slog::{debug, info, o, warn, Drain};
 use std::{thread, time};
-use tokio::runtime::Runtime;
+use tokio_compat::runtime::Runtime;
 
 #[cfg(feature = "local")]
 use eth2_libp2p_local as eth2_libp2p;
