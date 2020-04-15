@@ -1,6 +1,7 @@
 extern crate target_info;
 use clap::App;
-use slog::{debug, info, o, warn, Drain};
+use env_logger::Env;
+use slog::{debug, info, o, trace, warn, Drain, Level, Logger};
 use std::{thread, time};
 use tokio_compat::runtime::Runtime;
 
@@ -38,15 +39,32 @@ fn main() {
         Some(PROTOCOL_VERSION.into()),
         &matches.subcommand_matches("mothra").unwrap(),
     );
+    // configure logging
+    env_logger::Builder::from_env(Env::default()).init();
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build();
+    let drain = match config.debug_level.as_str() {
+        "info" => drain.filter_level(Level::Info),
+        "debug" => drain.filter_level(Level::Debug),
+        "trace" => drain.filter_level(Level::Trace),
+        "warn" => drain.filter_level(Level::Warning),
+        "error" => drain.filter_level(Level::Error),
+        "crit" => drain.filter_level(Level::Critical),
+        _ => drain.filter_level(Level::Info),
+    };
+    let slog = Logger::root(drain.fuse(), o!());
+    let log = slog.new(o!("mock-node" => "mock-node"));
 
     config.network_config.topics = topics::create_topics(FORK_DIGEST);
 
-    let (network_globals, network_send, network_exit, network_logger) = Mothra::new(
+    let (network_globals, network_send, network_exit) = Mothra::new(
         config,
         &executor,
         on_discovered_peer,
         on_receive_gossip,
         on_receive_rpc,
+        log.new(o!("mock-node" => "Mothra")),
     )
     .unwrap();
 
@@ -65,7 +83,7 @@ fn main() {
             )
             .into(),
             data,
-            network_logger.clone(),
+            log.new(o!("mock-node" => "Mothra")),
         );
     }
 }

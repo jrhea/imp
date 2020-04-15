@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::sync::Arc;
 
@@ -26,6 +27,7 @@ impl Service {
         platform: String,
         protocol_version: String,
         arg_matches: &ArgMatches<'_>,
+        log: slog::Logger,
     ) -> Self {
         let mut config = Mothra::get_config(
             Some(client_name),
@@ -36,12 +38,13 @@ impl Service {
 
         config.network_config.topics = create_topics(FORK_DIGEST);
 
-        let (network_globals, network_send, network_exit, log) = Mothra::new(
+        let (network_globals, network_send, network_exit) = Mothra::new(
             config,
             &executor,
             on_discovered_peer,
             on_receive_gossip,
             on_receive_rpc,
+            log.new(o!("P2PService" => "Mothra")),
         )
         .unwrap();
 
@@ -58,7 +61,7 @@ impl Service {
             match shutdown_rx.recv().await {
                 Some(Message::Shutdown) => {
                     println!("{:?}: shutdown message received.", type_name::<Service>());
-                    self.network_exit.send(());
+                    let _ = self.network_exit.send(());
                     break;
                 }
                 _ => (),
