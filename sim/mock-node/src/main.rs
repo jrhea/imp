@@ -1,8 +1,7 @@
 extern crate target_info;
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::App;
 use slog::{debug, info, o, warn, Drain};
 use std::{thread, time};
-use target_info::Target;
 use tokio::runtime::Runtime;
 
 #[cfg(feature = "local")]
@@ -11,9 +10,9 @@ use eth2_libp2p_local as eth2_libp2p;
 use mothra_local as mothra;
 
 use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
-use mothra::{cli_app, config::Config, gossip, rpc_request, rpc_response, Mothra, NetworkMessage};
+use mothra::{cli_app, gossip, Mothra};
 
-use p2p::{topics, P2PService, FORK_DIGEST};
+use p2p::{topics, FORK_DIGEST};
 
 const CLIENT_NAME: &str = "mock-node";
 const PROTOCOL_VERSION: &str = "imp/libp2p";

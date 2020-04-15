@@ -1,11 +1,10 @@
 use datatypes::Message;
-use futures::future::{AbortHandle, Abortable, Aborted};
 use network::NetworkService;
 use std::any::type_name;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
-use tokio::{runtime, signal, task, time};
+use tokio::sync::watch;
+use tokio::task;
 
 pub struct Agent {
     network_service: Arc<NetworkService>,
@@ -16,20 +15,17 @@ impl Agent {
         Arc::new(Agent { network_service })
     }
 
-    pub async fn spawn(&self, mut rx: mpsc::UnboundedReceiver<Message>) {
+    pub async fn spawn(&self, mut shutdown_rx: watch::Receiver<Message>) {
         task::spawn(async move {
-            match rx.recv().await {
-                Some(Message::Command) => {
-                    println!("{:?}: command message received.", type_name::<Agent>());
-                }
-                Some(Message::Network) => {
-                    println!("{:?}: network message received.", type_name::<Agent>());
-                }
-                Some(Message::Shutdown) => {
-                    println!("{:?}: shutdown message received.", type_name::<Agent>());
-                }
-                _ => (),
-            }
+            loop {
+                match shutdown_rx.recv().await {
+                    Some(Message::Shutdown) => {
+                        println!("{:?}: shutdown message received.", type_name::<Agent>());
+                        break;
+                    }
+                    _ => (),
+                };
+            };
         });
     }
 }

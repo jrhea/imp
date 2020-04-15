@@ -1,21 +1,15 @@
 use clap::ArgMatches;
-use futures::{sync::oneshot, Future};
 use std::any::type_name;
-use std::cell::RefCell;
 use std::sync::Arc;
-use std::{thread, time};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 
 use crate::types::topics::create_topics;
 use crate::types::FORK_DIGEST;
 use datatypes::Message;
-use eth2_libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 #[cfg(feature = "local")]
 use eth2_libp2p_local as eth2_libp2p;
-use mothra::{
-    cli_app, config::Config, gossip, rpc_request, rpc_response, Mothra, NetworkGlobals,
-    NetworkMessage,
+use mothra::{ Mothra, NetworkGlobals, NetworkMessage,
 };
 #[cfg(feature = "local")]
 use mothra_local as mothra;
@@ -66,16 +60,16 @@ impl Service {
         }
     }
 
-    pub async fn spawn(&mut self, mut rx: tokio2::sync::mpsc::UnboundedReceiver<Message>) {
-        match rx.recv().await {
-            Some(Message::Network) => {
-                println!("{:?}: network message received.", type_name::<Service>());
-            }
-            Some(Message::Shutdown) => {
-                println!("{:?}: shutdown message received.", type_name::<Service>());
-            }
-            _ => (),
-        };
+    pub async fn spawn(&mut self, mut shutdown_rx: tokio2::sync::watch::Receiver<Message>) {
+        loop {
+            match shutdown_rx.recv().await {
+                Some(Message::Shutdown) => {
+                    println!("{:?}: shutdown message received.", type_name::<Service>());
+                    break;
+                }
+                _ => (),
+            };
+        }
     }
 }
 

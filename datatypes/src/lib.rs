@@ -1,8 +1,4 @@
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::oneshot;
-use tokio::{runtime, signal, task, time};
-
+#[derive(Clone, Copy)]
 pub enum Message {
     /// Message originating from command and control
     Command,
@@ -10,4 +6,6 @@ pub enum Message {
     Network,
     /// Message that tells services to shutdown
     Shutdown,
+    /// No value
+    None,
 }
