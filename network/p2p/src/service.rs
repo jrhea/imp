@@ -29,22 +29,39 @@ impl Service {
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
+        let mut mothra_log = log.clone();
+
+        // get mothra subcommand args matches
+        let mothra_arg_matches = &arg_matches.subcommand_matches("mothra").unwrap();
+
+        // if debug-level is set in subcommand
+        // Note: bc mothra sets default value to info
+        // mothra_arg_matches.is_present is always true
+        // so we have to use mothra_arg_matches.occurrences_of
+        if mothra_arg_matches.occurrences_of("debug-level") > 0 {
+            let debug_level = mothra_arg_matches.value_of("debug-level").unwrap();
+
+            // re-configure logging
+            mothra_log = utils::config_logger(debug_level, false).new(o!("P2PService" => "Mothra"));
+        }
+
         let mut config = Mothra::get_config(
             Some(client_name),
             Some(platform),
             Some(protocol_version),
-            &arg_matches.subcommand_matches("mothra").unwrap(),
+            &mothra_arg_matches,
         );
 
+        // configure gossip topics
         config.network_config.topics = create_topics(FORK_DIGEST);
-
+        // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
             &executor,
             on_discovered_peer,
             on_receive_gossip,
             on_receive_rpc,
-            log.new(o!("P2PService" => "Mothra")),
+            mothra_log,
         )
         .unwrap();
 
@@ -60,7 +77,11 @@ impl Service {
         loop {
             match shutdown_rx.recv().await {
                 Some(Message::Shutdown) => {
-                    println!("{:?}: shutdown message received.", type_name::<Service>());
+                    info!(
+                        self.log,
+                        "{:?}: shutdown message received.",
+                        type_name::<Service>()
+                    );
                     let _ = self.network_exit.send(());
                     break;
                 }
@@ -71,20 +92,20 @@ impl Service {
 }
 
 fn on_discovered_peer(peer: String) {
-    //println!("{}: discovered peer", CLIENT_NAME);
-    println!("peer={:?}", peer);
+    println!("new peer discovered");
+    println!("peer: {:?}", peer);
 }
 
 fn on_receive_gossip(topic: String, data: Vec<u8>) {
-    //println!("{}: received gossip", CLIENT_NAME);
-    println!("topic={:?}", topic);
-    println!("data={:?}", String::from_utf8_lossy(&data));
+    println!("gossip message received");
+    println!("topic: {:?}", topic);
+    println!("data: {:?}", String::from_utf8_lossy(&data));
 }
 
 fn on_receive_rpc(method: String, req_resp: u8, peer: String, data: Vec<u8>) {
-    //println!("{}: received rpc", CLIENT_NAME);
-    println!("method={:?}", method);
-    println!("req_resp={:?}", req_resp);
-    println!("peer={:?}", peer);
-    println!("data={:?}", String::from_utf8_lossy(&data));
+    println!("rpc message received");
+    println!("method: {:?}", method);
+    println!("req_resp: {:?}", req_resp);
+    println!("peer: {:?}", peer);
+    println!("data: {:?}", String::from_utf8_lossy(&data));
 }

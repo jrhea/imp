@@ -11,3 +11,4 @@ datatypes = { path = "../datatypes", package="imp-datatypes"}
 tokio = { version = "0.2", features = ["full"] }
 clap = "2.33.0"
 futures = "0.3"
+slog = { version = "2.5.2" , features = ["max_level_trace"] }

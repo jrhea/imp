@@ -10,6 +10,7 @@ default = ["mothra", "eth2-libp2p"]
 local = ["mothra-local", "eth2-libp2p-local"]
 
 [dependencies]
+utils = { path = "../../utils", package="imp-utils"}
 p2p = { path = "../../network/p2p", package="imp-p2p"}
 mothra = { git = "https://github.com/prrkl/mothra", branch = "master", package = "mothra", optional = true }
 mothra-local = { path = "../../../mothra/core", package = "mothra", optional = true }
@@ -18,10 +19,7 @@ eth2-libp2p-local = { path = "../../../lighthouse/beacon_node/eth2-libp2p", pack
 
 tokio = "0.1.22"
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
-slog-term = "^2.4.0"
-slog-async = "^2.3.0"
 slog = { version = "2.5.2" , features = ["max_level_trace"] }
-env_logger = "0.6.0"
 target_info = "0.1.0"
 clap = "2.33.0"
 

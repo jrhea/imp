@@ -1,0 +1,12 @@
+[package]
+name = "imp-utils"
+version = "0.1.0"
+authors = ["jonny rhea <jonny.rhea@consensys.com>"]
+edition = "2018"
+
+[dependencies]
+slog-term = "^2.4.0"
+slog-async = "^2.3.0"
+slog = { version = "2.5.2" , features = ["max_level_trace"] }
+env_logger = "0.6.0"
+clap = "2.33.0"
