@@ -11,3 +11,4 @@ network = { path = "../network", package="imp-network"}
 datatypes = { path = "../datatypes", package="imp-datatypes"}
 tokio = { version = "0.2", features = ["full"] }
 futures = "0.3"
+slog = { version = "2.5.2" , features = ["max_level_trace"] }
