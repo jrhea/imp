@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use std::{thread, time};
 use tokio_compat::runtime::Runtime;
 
+use eth2::ssz::Encode;
+
 const CLIENT_NAME: &str = "mock-node";
 const PROTOCOL_VERSION: &str = "imp/libp2p";
 
@@ -36,13 +38,13 @@ fn main() {
         &mothra_arg_matches,
     );
 
-    let mut fork_digest = [0; 4];
     let testnet_dir = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".lighthouse")
         .join("testnet");
-    fork_digest = eth2::utils::get_fork_digest(Some(testnet_dir));
-    config.network_config.topics = eth2::utils::create_topic_ids(fork_digest);
+
+    let enr_fork_id = eth2::utils::get_genesis_enr_fork_id(Some(testnet_dir));
+    config.network_config.topics = eth2::utils::create_topic_ids(enr_fork_id.clone());
 
     let runtime = Runtime::new()
         .map_err(|e| format!("Failed to start runtime: {:?}", e))
@@ -51,6 +53,7 @@ fn main() {
 
     let (network_globals, network_send, network_exit) = Mothra::new(
         config,
+        enr_fork_id.clone().as_ssz_bytes(),
         &executor,
         on_discovered_peer,
         on_receive_gossip,
@@ -67,7 +70,7 @@ fn main() {
             .to_vec();
         gossip(
             network_send.clone(),
-            eth2::utils::get_gossip_topic_id(GossipKind::BeaconBlock, fork_digest),
+            eth2::utils::get_gossip_topic_id(GossipKind::BeaconBlock, enr_fork_id.clone()),
             data,
             log.new(o!("mock-node" => "Mothra")),
         );
