@@ -1,0 +1,9 @@
+[package]
+name = "imp-types"
+version = "0.1.0"
+authors = ["jonny rhea <jonathan.rhea@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2", features = ["full"] }
+

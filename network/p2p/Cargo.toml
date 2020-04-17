@@ -5,16 +5,15 @@ authors = ["jonny rhea <jonny.rhea@consensys.com>"]
 edition = "2018"
 
 [features]
-default = ["mothra", "eth2-libp2p"]
-local = ["mothra-local", "eth2-libp2p-local"]
+default = ["mothra"]
+local = ["mothra-local"]
 
 [dependencies]
-datatypes = { path = "../../datatypes", package="imp-datatypes"}
+eth2 = { path = "../../eth2", package="imp-eth2"}
+types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
 mothra = { git = "https://github.com/prrkl/mothra", branch = "master", package = "mothra", optional = true }
 mothra-local = { path = "../../../mothra/core", package = "mothra", optional = true }
-eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
-eth2-libp2p-local = { path = "../../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
 
 tokio-01 = { version = "0.1.22", package = "tokio"}
 tokio-02 = { version = "0.2", features = ["full"], package = "tokio"}

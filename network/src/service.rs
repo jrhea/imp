@@ -1,4 +1,4 @@
-use datatypes::Message;
+use types::events::Events;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::sync::Arc;
@@ -13,11 +13,11 @@ impl Service {
     pub fn new(log: slog::Logger) -> Self {
         Service { log }
     }
-    pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Message>) {
+    pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         task::spawn(async move {
             loop {
                 match shutdown_rx.recv().await {
-                    Some(Message::Shutdown) => {
+                    Some(Events::ShutdownMessage) => {
                         info!(
                             self.log,
                             "{:?}: shutdown message received.",

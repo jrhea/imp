@@ -8,7 +8,7 @@ use tokio_02::sync::watch;
 use tokio_02::{signal, task, time};
 
 use agent::Agent;
-use datatypes::Message;
+use types::events::Events;
 use network::NetworkService;
 use p2p::{cli_app, P2PService};
 
@@ -70,7 +70,7 @@ fn main() -> Result<(), std::io::Error> {
     let network_service = NetworkService::new(log.new(o!("imp" => "NetworkService")));
     let agent = Agent::new(log.new(o!("imp" => "Agent")));
 
-    let (shutdown_tx, shutdown_rx) = watch::channel::<Message>(Message::None);
+    let (shutdown_tx, shutdown_rx) = watch::channel::<Events>(Events::None);
 
     // main "event loop"
     runtime.block_on_std(async move {
@@ -88,7 +88,7 @@ fn main() -> Result<(), std::io::Error> {
     });
 
     info!(log, "Sending shutdown signal.");
-    let _ = shutdown_tx.broadcast(Message::Shutdown);
+    let _ = shutdown_tx.broadcast(Events::ShutdownMessage);
 
     // Shutdown the runtime
     runtime.shutdown_on_idle().wait().unwrap();
