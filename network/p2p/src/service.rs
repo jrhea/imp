@@ -4,7 +4,8 @@ use std::any::type_name;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use eth2::utils::{create_topic_ids, get_fork_digest};
+use eth2::ssz::Encode;
+use eth2::utils::{create_topic_ids, get_genesis_enr_fork_id};
 use types::events::Events;
 
 #[cfg(not(feature = "local"))]
@@ -17,7 +18,7 @@ pub struct Service {
     network_globals: Arc<NetworkGlobals>,
     network_send: tokio_01::sync::mpsc::UnboundedSender<NetworkMessage>,
     network_exit: tokio_01::sync::oneshot::Sender<()>,
-    fork_digest: [u8; 4],
+    enr_fork_id: eth2::types::EnrForkId,
     log: slog::Logger,
 }
 
@@ -53,14 +54,14 @@ impl Service {
             Some(protocol_version),
             &mothra_arg_matches,
         );
-        let mut fork_digest = [0; 4];
         // configure gossip topics
-        fork_digest = get_fork_digest(testnet_dir);
-        config.network_config.topics = create_topic_ids(fork_digest);
+        let enr_fork_id = get_genesis_enr_fork_id(testnet_dir);
+        config.network_config.topics = create_topic_ids(enr_fork_id.clone());
 
         // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
+            enr_fork_id.as_ssz_bytes(),
             &executor,
             on_discovered_peer,
             on_receive_gossip,
@@ -73,7 +74,7 @@ impl Service {
             network_globals,
             network_send,
             network_exit,
-            fork_digest,
+            enr_fork_id,
             log,
         }
     }

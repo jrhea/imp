@@ -5,8 +5,8 @@ authors = ["jonny rhea <jonathan.rhea@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["eth2-libp2p", "eth2-types","eth2_config","eth2_testnet_config"]
-local = ["eth2-libp2p-local", "eth2-types-local","eth2_config_local","eth2_testnet_config_local"]
+default = ["eth2-libp2p", "eth2-types","eth2_config","eth2_testnet_config","eth2_ssz","eth2_ssz_derive","eth2_ssz_types"]
+local = ["eth2-libp2p-local", "eth2-types-local","eth2_config_local","eth2_testnet_config_local","eth2_ssz_local","eth2_ssz_derive_local","eth2_ssz_types_local"]
 
 [dependencies]
 dirs = "2.0.2"
@@ -14,9 +14,9 @@ eth2-libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
 eth2-libp2p-local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
 eth2-types =  { version = "0.2.0",  package = "types", optional = true }
 eth2-types-local =  { path = "../../lighthouse/eth2/types", package = "types", optional = true }
-eth2_ssz =  { version = "0.2.0",  package = "eth2_ssz", optional = true }
+eth2_ssz =  { version = "0.1.2",  package = "eth2_ssz", optional = true }
 eth2_ssz_local =  { path = "../../lighthouse/eth2/utils/ssz", package = "eth2_ssz", optional = true }
-eth2_ssz_derive =  { version = "0.2.0",  package = "eth2_ssz_derive", optional = true }
+eth2_ssz_derive =  { version = "0.1.0",  package = "eth2_ssz_derive", optional = true }
 eth2_ssz_derive_local =  { path = "../../lighthouse/eth2/utils/ssz_derive", package = "eth2_ssz_derive", optional = true }
 eth2_ssz_types =  { version = "0.2.0",  package = "eth2_ssz_types", optional = true }
 eth2_ssz_types_local =  { path = "../../lighthouse/eth2/utils/ssz_types", package = "eth2_ssz_types", optional = true }
