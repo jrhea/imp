@@ -10,15 +10,16 @@ include = [
 
 [features]
 default = []
-local = ["p2p/local"]
+local = ["p2p/local","eth2/local"]
 
 
 [dependencies]
 network = { path = "network", package="imp-network"}
 p2p = { path = "network/p2p", package="imp-p2p"}
 agent = { path = "agent", package="imp-agent"}
-datatypes = { path = "datatypes", package="imp-datatypes"}
+types = { path = "types", package="imp-types"}
 utils = { path = "utils", package="imp-utils"}
+eth2 = { path = "eth2", package="imp-eth2"}
 
 tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
 tokio-01 = { version = "0.1.22", package = "tokio"}
@@ -31,14 +32,15 @@ futures = "0.3"
 
 
 [patch.crates-io]
-tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "tree_hash" }
-tree_hash_derive = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "tree_hash_derive" }
-eth2_ssz = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2_ssz" }
-eth2_ssz_derive = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2_ssz_derive" }
-eth2_ssz_types = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2_ssz_types" }
-types = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "types" }
-eth2_hashing = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2_hashing" }
-eth2-libp2p = { git = "https://github.com/sigp/lighthouse", rev = "d7e29382967c16a7a4ce73d1672867523287402b", package = "eth2-libp2p", optional = true }
+tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "tree_hash" }
+tree_hash_derive = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "tree_hash_derive" }
+eth2_ssz = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2_ssz" }
+eth2_ssz_derive = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2_ssz_derive" }
+eth2_ssz_types = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2_ssz_types" }
+eth2_config = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2_config" }
+eth2-types = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "types" }
+eth2_hashing = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2_hashing" }
+eth2-libp2p = { git = "https://github.com/sigp/lighthouse", rev = "19b8c5a9e01a4e814533fa68127e67e3c0afa6cf", package = "eth2-libp2p", optional = true }
 
 #c5416fa11646d68106107b902486840054d0daa6
 #[patch."https://github.com/prrkl/mothra.git"]

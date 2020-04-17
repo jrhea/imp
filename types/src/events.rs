@@ -1,11 +1,11 @@
 #[derive(Clone, Copy)]
-pub enum Message {
+pub enum Events {
     /// Message originating from command and control
-    Command,
+    CommandMessage,
     /// Message originating from the network service
-    Network,
+    NetworkMessage,
     /// Message that tells services to shutdown
-    Shutdown,
+    ShutdownMessage,
     /// No value
     None,
 }

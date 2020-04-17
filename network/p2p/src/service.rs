@@ -3,9 +3,8 @@ use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::sync::Arc;
 
-use crate::types::topics::create_topics;
-use crate::types::FORK_DIGEST;
-use datatypes::Message;
+use eth2::utils::create_topic_ids;
+use types::events::Events;
 
 #[cfg(not(feature = "local"))]
 use mothra::{Mothra, NetworkGlobals, NetworkMessage};
@@ -53,7 +52,7 @@ impl Service {
         );
 
         // configure gossip topics
-        config.network_config.topics = create_topics(FORK_DIGEST);
+        config.network_config.topics = create_topic_ids();
         // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
@@ -73,10 +72,10 @@ impl Service {
         }
     }
 
-    pub async fn spawn(self, mut shutdown_rx: tokio_02::sync::watch::Receiver<Message>) {
+    pub async fn spawn(self, mut shutdown_rx: tokio_02::sync::watch::Receiver<Events>) {
         loop {
             match shutdown_rx.recv().await {
-                Some(Message::Shutdown) => {
+                Some(Events::ShutdownMessage) => {
                     info!(
                         self.log,
                         "{:?}: shutdown message received.",

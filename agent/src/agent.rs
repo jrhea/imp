@@ -1,4 +1,4 @@
-use datatypes::Message;
+use types::events::Events;
 use network::NetworkService;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
@@ -16,11 +16,11 @@ impl Agent {
         Agent { log }
     }
 
-    pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Message>) {
+    pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         task::spawn(async move {
             loop {
                 match shutdown_rx.recv().await {
-                    Some(Message::Shutdown) => {
+                    Some(Events::ShutdownMessage) => {
                         info!(
                             self.log,
                             "{:?}: shutdown message received.",
