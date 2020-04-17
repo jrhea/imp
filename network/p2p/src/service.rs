@@ -1,9 +1,10 @@
 use clap::ArgMatches;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use eth2::utils::create_topic_ids;
+use eth2::utils::{create_topic_ids, get_fork_digest};
 use types::events::Events;
 
 #[cfg(not(feature = "local"))]
@@ -16,6 +17,7 @@ pub struct Service {
     network_globals: Arc<NetworkGlobals>,
     network_send: tokio_01::sync::mpsc::UnboundedSender<NetworkMessage>,
     network_exit: tokio_01::sync::oneshot::Sender<()>,
+    fork_digest: [u8; 4],
     log: slog::Logger,
 }
 
@@ -25,6 +27,7 @@ impl Service {
         client_name: String,
         platform: String,
         protocol_version: String,
+        testnet_dir: Option<PathBuf>,
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
@@ -50,9 +53,11 @@ impl Service {
             Some(protocol_version),
             &mothra_arg_matches,
         );
-
+        let mut fork_digest = [0; 4];
         // configure gossip topics
-        config.network_config.topics = create_topic_ids();
+        fork_digest = get_fork_digest(testnet_dir);
+        config.network_config.topics = create_topic_ids(fork_digest);
+
         // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
@@ -68,6 +73,7 @@ impl Service {
             network_globals,
             network_send,
             network_exit,
+            fork_digest,
             log,
         }
     }

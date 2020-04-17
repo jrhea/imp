@@ -2,15 +2,16 @@ extern crate error_chain;
 extern crate target_info;
 use clap::{App, Arg};
 use slog::{debug, info, o, trace, warn};
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio_01::prelude::future::Future;
 use tokio_02::sync::watch;
 use tokio_02::{signal, task, time};
 
 use agent::Agent;
-use types::events::Events;
 use network::NetworkService;
 use p2p::{cli_app, P2PService};
+use types::events::Events;
 
 const CLIENT_NAME: &str = "imp";
 const P2P_PROTOCOL_VERSION: &str = "imp/libp2p";
@@ -30,6 +31,13 @@ fn main() -> Result<(), std::io::Error> {
                 .default_value(P2P_PROTOCOL_VERSION),
         )
         .arg(
+            Arg::with_name("testnet-dir")
+                .long("testnet-dir")
+                .value_name("DIR")
+                .help("The location of the testnet directory to use.")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("debug-level")
                 .long("debug-level")
                 .value_name("LEVEL")
@@ -40,6 +48,11 @@ fn main() -> Result<(), std::io::Error> {
         )
         .subcommand(cli_app())
         .get_matches();
+
+    let mut testnet_dir = None;
+    if let Some(testnet_dir_str) = arg_matches.value_of("testnet-dir") {
+        testnet_dir = Some(PathBuf::from(testnet_dir_str));
+    }
 
     let p2p_protocol_version = arg_matches.value_of("p2p-protocol-version").unwrap();
 
@@ -64,6 +77,7 @@ fn main() -> Result<(), std::io::Error> {
         client_name,
         platform,
         p2p_protocol_version.into(),
+        testnet_dir,
         &arg_matches,
         log.new(o!("imp" => "P2PService")),
     );

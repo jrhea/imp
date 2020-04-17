@@ -1,4 +1,3 @@
-use types::events::Events;
 use network::NetworkService;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
@@ -6,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::watch;
 use tokio::task;
+use types::events::Events;
 
 pub struct Agent {
     log: slog::Logger,
