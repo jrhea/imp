@@ -4,7 +4,7 @@
 
 ## Demo
 
-Here's a screencap of a couple of imp agents connecting to a sigp/lighthouse node & validator pair:
+Here's a screencap of two imp agents peered and communicating with a [Lighthouse](https://github.com/sigp/lighthouse) node / validator pair:
 
 ![imp](https://github.com/prrkl/docs/blob/master/resources/imphouse.gif)
 
