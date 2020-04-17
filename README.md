@@ -12,8 +12,6 @@ Here's a screencap of two imp agents peered and communicating with a [Lighthouse
 
 For more information on prkl click [here](https://github.com/prrkl/docs/blob/master/README.md)
 
-![imp](https://camo.githubusercontent.com/f5284bbbff6acecfe71b9f7bdded3bfcc0894164/68747470733a2f2f692e696d6775722e636f6d2f564f68714832662e6a7067)
-
 ## Prereqs ( MacOS )
 
 Rust:
