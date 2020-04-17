@@ -1,6 +1,6 @@
+use clap::{App, Arg};
 use env_logger::Env;
 use slog::{debug, info, o, trace, warn, Drain, Level, Logger};
-use clap::{App, Arg};
 
 pub fn config_logger(debug_level: &str, init: bool) -> slog::Logger {
     if init {

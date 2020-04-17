@@ -1,9 +1,9 @@
-use types::events::Events;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::sync::Arc;
 use tokio::sync::watch;
 use tokio::{runtime, signal, task, time};
+use types::events::Events;
 
 pub struct Service {
     log: slog::Logger,
