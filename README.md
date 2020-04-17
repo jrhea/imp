@@ -2,6 +2,16 @@
 
 **Imp** is a semi-autonomous network agent designed to crawl the eth2 network an collect data that will be used to monitor the network health in realtime.
 
+## Demo
+
+Here's a screencap of a couple of imp agents connecting to a sigp/lighthouse node & validator pair:
+
+![imp](https://github.com/prrkl/docs/blob/master/resources/imphouse.gif)
+
+## Docs
+
+For more information on prkl click [here](https://github.com/prrkl/docs/blob/master/README.md)
+
 ![imp](https://camo.githubusercontent.com/f5284bbbff6acecfe71b9f7bdded3bfcc0894164/68747470733a2f2f692e696d6775722e636f6d2f564f68714832662e6a7067)
 
 ## Prereqs ( MacOS )
@@ -80,10 +90,6 @@ This is an option for developers.  It is a convenient was to reference packages,
 
 ```
 
-Here's a screenshot of the demo script running: 
-
-![imp](https://github.com/prrkl/docs/blob/master/resources/imp.png)
-
 Here is a glimpse of the available options:
 
 ```
@@ -140,5 +146,3 @@ OPTIONS:
         --topics <STRING>                 One or more comma-delimited gossipsub topics to subscribe to.
 
 ```
-
-
