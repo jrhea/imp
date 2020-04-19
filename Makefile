@@ -31,6 +31,7 @@ fmt:
 	cd eth2 && cargo fmt
 	cd network && cargo fmt
 	cd network/p2p && cargo fmt
+	cd network/utils/discovery && cargo fmt
 	cd types && cargo fmt
 	cd utils && cargo fmt
 
