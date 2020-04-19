@@ -4,8 +4,9 @@ use std::any::type_name;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use eth2::ssz::Encode;
-use eth2::utils::{create_topic_ids, get_genesis_enr_fork_id};
+use eth2::ssz::{ Encode, Decode };
+use eth2::utils::{create_topic_ids, get_fork_id_from_string, get_fork_id_from_dir};
+use eth2::types::EnrForkId;
 use types::events::Events;
 
 #[cfg(not(feature = "local"))]
@@ -18,7 +19,7 @@ pub struct Service {
     network_globals: Arc<NetworkGlobals>,
     network_send: tokio_01::sync::mpsc::UnboundedSender<NetworkMessage>,
     network_exit: tokio_01::sync::oneshot::Sender<()>,
-    enr_fork_id: eth2::types::EnrForkId,
+    enr_fork_id: Option<eth2::types::EnrForkId>,
     log: slog::Logger,
 }
 
@@ -43,10 +44,18 @@ impl Service {
         // so we have to use mothra_arg_matches.occurrences_of
         if mothra_arg_matches.occurrences_of("debug-level") > 0 {
             let debug_level = mothra_arg_matches.value_of("debug-level").unwrap();
-
             // re-configure logging
             mothra_log = utils::config_logger(debug_level, false).new(o!("P2PService" => "Mothra"));
         }
+
+        // NOTE:  The reason the bootnode must be parsed form the CLI instead of using the Enr type
+        // from mothra directly is bc Enr is defined in both Mothra and LH (which is a problem)
+        let boot_nodes: Vec<String> = if mothra_arg_matches.is_present("boot-nodes") {
+            let boot_enr_str = mothra_arg_matches.value_of("boot-nodes").unwrap();
+            boot_enr_str.split(',').map(|x| x.into()).collect::<Vec<String>>()
+        } else {
+            Default::default()
+        };
 
         let mut config = Mothra::get_config(
             Some(client_name),
@@ -54,14 +63,35 @@ impl Service {
             Some(protocol_version),
             &mothra_arg_matches,
         );
-        // configure gossip topics
-        let enr_fork_id = get_genesis_enr_fork_id(testnet_dir);
-        config.network_config.topics = create_topic_ids(enr_fork_id.clone());
+        
+        // TODO
+        // Option: Learn fork_id from supplied cli arg directly
+        
 
+        // Option: Learn fork_id from bootnode
+        let (enr_fork_id, enr_fork_id_bytes) = match get_fork_id_from_string(boot_nodes[0].clone()) {
+            Some(enr_fork_id) => {
+                // configure gossip topics
+                config.network_config.topics = create_topic_ids(enr_fork_id.clone());
+                (Some(enr_fork_id.clone()),enr_fork_id.clone().as_ssz_bytes())
+            },
+            _ => {
+                // Option: Learn fork_id from supplied testnet_dir
+                match get_fork_id_from_dir(testnet_dir) {
+                    Some(enr_fork_id) => {
+                        // configure gossip topics
+                        config.network_config.topics = create_topic_ids(enr_fork_id.clone());
+                        (Some(enr_fork_id.clone()),enr_fork_id.clone().as_ssz_bytes())
+                },
+                    _ => (None, [0u8,32].to_vec())
+                }
+            }
+        };
+        
         // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
-            enr_fork_id.as_ssz_bytes(),
+            enr_fork_id_bytes,
             &executor,
             on_discovered_peer,
             on_receive_gossip,
