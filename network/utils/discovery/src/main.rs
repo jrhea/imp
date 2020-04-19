@@ -36,10 +36,10 @@
 use futures::prelude::*;
 use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5Event};
 use libp2p::identity;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
-use std::collections::HashMap;
 
 fn main() {
     env_logger::init();
@@ -137,13 +137,12 @@ fn main() {
     let mut query_interval = tokio::timer::Interval::new_interval(Duration::from_secs(3));
     println!(
         "{0: <6}{1: <14}{2: <55}{3: <66}{4: }",
-        "index", "peer_id", "node_id", "multiaddrs","enr"
+        "index", "peer_id", "node_id", "multiaddrs", "enr"
     );
 
-    let mut peers: HashMap<String, (String,String)> = Default::default();
+    let mut peers: HashMap<String, (String, String)> = Default::default();
     // Kick it off!
     tokio::run(futures::future::poll_fn(move || -> Result<_, ()> {
-        
         loop {
             // start a query if it's time to do so
             while let Ok(Async::Ready(_)) = query_interval.poll() {
@@ -153,13 +152,24 @@ fn main() {
 
                 for enr in swarm.enr_entries() {
                     let node_id = enr.node_id().clone().to_string();
-                    
-                    if !peers.contains_key(&node_id){
+
+                    if !peers.contains_key(&node_id) {
                         let peer_id = enr.peer_id().clone().to_string();
-                        let multiaddr: String = enr.multiaddr().iter().map(|m| m.to_string()+"    ").collect();;
-                        peers.insert(node_id.clone(),(peer_id.clone(), multiaddr.clone()));
+                        let multiaddr: String = enr
+                            .multiaddr()
+                            .iter()
+                            .map(|m| m.to_string() + "    ")
+                            .collect();
+                        peers.insert(node_id.clone(), (peer_id.clone(), multiaddr.clone()));
                         //let eth2 = enr.get("eth2");
-                        println!("{0: <6}{1: <14}{2: <55}{3: <66}{4: }", peers.len(),node_id,peer_id,multiaddr,enr.to_base64());
+                        println!(
+                            "{0: <6}{1: <14}{2: <55}{3: <66}{4: }",
+                            peers.len(),
+                            node_id,
+                            peer_id,
+                            multiaddr,
+                            enr.to_base64()
+                        );
                     }
                 }
                 //println!("Searching for peers...");
@@ -170,7 +180,7 @@ fn main() {
             match swarm.poll().expect("Error while polling swarm") {
                 Async::Ready(Some(event)) => match event {
                     Discv5Event::FindNodeResult { key, closer_peers } => {
-                       /* if !closer_peers.is_empty() {
+                        /* if !closer_peers.is_empty() {
                             println!("Query Completed. Nodes found:");
                             for n in closer_peers {
                                 println!("Node: {}", n);
@@ -178,15 +188,15 @@ fn main() {
                         } else {
                             println!("Query Completed. No peers found.")
                         }*/
-                    },
-                    Discv5Event::Discovered (peer) => {
+                    }
+                    Discv5Event::Discovered(peer) => {
                         //let peer_id = peer.peer_id().to_string();
                         //let node_id =  peer.node_id().to_string();
                         //let multiaddr = peer.multiaddr();
                         //swarm.add_enr(peer);
                         //let eth2 = enr.get("eth2");
                         //println!("{0: <6}{1: <55}{2: <14}{3:?}", i, peer_id, node_id, multiaddr);
-                    },
+                    }
                     Discv5Event::EnrAdded { enr, replaced } => {
                         //println!("enr added");
                         //let peer_id = enr.peer_id().to_string();
