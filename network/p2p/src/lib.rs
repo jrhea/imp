@@ -1,4 +1,4 @@
-mod service;
+mod adapter;
 pub use mothra;
 pub use mothra::{cli_app, Mothra};
-pub use service::Service as P2PService;
+pub use adapter::Adapter as P2PAdapter;

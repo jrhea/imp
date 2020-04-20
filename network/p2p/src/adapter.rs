@@ -15,7 +15,7 @@ use mothra::{Mothra, NetworkGlobals, NetworkMessage};
 use mothra_local::{Mothra, NetworkGlobals, NetworkMessage};
 
 // Holds variables needed to interacts with mothra
-pub struct Service {
+pub struct Adapter {
     network_globals: Arc<NetworkGlobals>,
     network_send: tokio_01::sync::mpsc::UnboundedSender<NetworkMessage>,
     network_exit: tokio_01::sync::oneshot::Sender<()>,
@@ -23,7 +23,7 @@ pub struct Service {
     log: slog::Logger,
 }
 
-impl Service {
+impl Adapter {
     pub fn new(
         executor: &tokio_compat::runtime::TaskExecutor,
         client_name: String,
@@ -45,7 +45,7 @@ impl Service {
         if mothra_arg_matches.occurrences_of("debug-level") > 0 {
             let debug_level = mothra_arg_matches.value_of("debug-level").unwrap();
             // re-configure logging
-            mothra_log = utils::config_logger(debug_level, false).new(o!("P2PService" => "Mothra"));
+            mothra_log = utils::config_logger(debug_level, false).new(o!("P2PAdapter" => "Mothra"));
         }
 
         // NOTE:  The reason the bootnode must be parsed form the CLI instead of using the Enr type
@@ -109,7 +109,7 @@ impl Service {
         )
         .unwrap();
 
-        Service {
+        Adapter {
             network_globals,
             network_send,
             network_exit,
@@ -118,21 +118,8 @@ impl Service {
         }
     }
 
-    pub async fn spawn(self, mut shutdown_rx: tokio_02::sync::watch::Receiver<Events>) {
-        loop {
-            match shutdown_rx.recv().await {
-                Some(Events::ShutdownMessage) => {
-                    info!(
-                        self.log,
-                        "{:?}: shutdown message received.",
-                        type_name::<Service>()
-                    );
-                    let _ = self.network_exit.send(());
-                    break;
-                }
-                _ => (),
-            };
-        }
+    pub fn close(self) ->  Result<(),()> {
+        self.network_exit.send(())
     }
 }
 

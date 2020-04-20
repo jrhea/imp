@@ -1,17 +1,21 @@
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
-use std::sync::Arc;
 use tokio::sync::watch;
 use tokio::{runtime, signal, task, time};
 use types::events::Events;
+use p2p::P2PAdapter;
 
 pub struct Service {
+    p2p_adapter: P2PAdapter,
     log: slog::Logger,
 }
 
 impl Service {
-    pub fn new(log: slog::Logger) -> Self {
-        Service { log }
+    pub fn new(p2p_adapter: P2PAdapter, log: slog::Logger) -> Self {
+        Service { 
+            p2p_adapter,
+            log 
+        }
     }
     pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         task::spawn(async move {
@@ -23,6 +27,7 @@ impl Service {
                             "{:?}: shutdown message received.",
                             type_name::<Service>()
                         );
+                        let _ = self.p2p_adapter.close();
                         break;
                     }
                     _ => (),
