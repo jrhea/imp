@@ -118,7 +118,7 @@ impl Adapter {
         }
     }
 
-    pub fn close(self) ->  Result<(),()> {
+    pub fn close(self) -> Result<(), ()> {
         self.network_exit.send(())
     }
 }
