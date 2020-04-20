@@ -1,16 +1,16 @@
 extern crate error_chain;
 extern crate target_info;
+use agent::Agent;
 use clap::{App, Arg};
+use network::NetworkService;
+use p2p::cli_app;
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
+use std::thread::sleep;
 use tokio_01::prelude::future::Future;
 use tokio_02::sync::watch;
-use tokio_02::{signal};
-
-use agent::Agent;
-use network::NetworkService;
+use tokio_02::{signal, time::timeout, time::Duration};
 use types::events::Events;
-use p2p::cli_app;
 
 const CLIENT_NAME: &str = "imp";
 const P2P_PROTOCOL_VERSION: &str = "imp/libp2p";
@@ -107,11 +107,18 @@ fn main() -> Result<(), std::io::Error> {
         signal::ctrl_c().await.expect("failed to listen for event");
     });
 
-    info!(log, "Sending shutdown signal.");
+    warn!(log, "Sending shutdown signal.");
     let _ = shutdown_tx.broadcast(Events::ShutdownMessage);
 
+    sleep(Duration::new(1, 0));
+
     // Shutdown the runtime
-    runtime.shutdown_on_idle().wait().unwrap();
-    info!(log.clone(), "Exiting imp.");
+    let res = runtime.shutdown_now().wait();
+
+    if res.is_err() {
+        debug!(log, "operation timed out");
+    }
+
+    warn!(log.clone(), "Exiting imp.");
     Ok(())
 }

@@ -9,7 +9,8 @@ edition = "2018"
 p2p = { path = "p2p", package="imp-p2p"}
 types = { path = "../types", package="imp-types"}
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
-tokio = { version = "0.2", features = ["full"], package = "tokio" }
+tokio-01 = { version = "0.1.22", package = "tokio"}
+tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
 clap = "2.33.0"
 futures = "0.3"
 slog = { version = "2.5.2" , features = ["max_level_trace"] }
