@@ -124,31 +124,7 @@ pub fn discover_peers(arg_matches: &ArgMatches<'_>) {
 
             match swarm.poll().expect("Error while polling swarm") {
                 Async::Ready(Some(event)) => match event {
-                    Discv5Event::FindNodeResult { key, closer_peers } => {
-                        // if !closer_peers.is_empty() {
-                        //     println!("Query Completed. Nodes found:");
-                        //     for n in closer_peers {
-                        //         println!("Node: {}", n);
-                        //     }
-                        // } else {
-                        //     println!("Query Completed. No peers found.")
-                        // }
-                    }
-                    Discv5Event::Discovered(peer) => {
-                        // let peer_id = peer.peer_id().to_string();
-                        // let node_id =  peer.node_id().to_string();
-                        // let multiaddr = peer.multiaddr();
-                        // swarm.add_enr(peer);
-                        // println!("{0: <55}{1: <14}{2:?}", peer_id, node_id, multiaddr);
-                    }
-                    Discv5Event::EnrAdded { enr, replaced } => {
-                        //println!("enr added");
-                        //let peer_id = enr.peer_id().to_string();
-                        //let node_id =  enr.node_id().to_string();
-                        //let multiaddr = enr.multiaddr();
-                        //let eth2 = enr.get("eth2");
-                        //println!("{0: <55}{1: <14}{2:?}", peer_id, node_id, multiaddr);
-                    }
+
                     _ => (),
                 },
                 Async::Ready(None) | Async::NotReady => break,
