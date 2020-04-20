@@ -45,22 +45,19 @@ impl Service {
     pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         task::spawn(async move {
             loop {
-                match shutdown_rx.recv().await {
-                    Some(Events::ShutdownMessage) => {
-                        info!(
-                            self.log,
-                            "{:?}: shutdown message received.",
-                            type_name::<Service>()
-                        );
-                        let _ = match self.p2p_adapter {
-                            Some(p2p_adapter) => p2p_adapter.close(),
-                            None => Err(()),
-                        };
-                        break;
-                    }
-                    _ => (),
-                };
+                if let Some(Events::ShutdownMessage) = shutdown_rx.recv().await {
+                    info!(
+                    self.log,
+                    "{:?}: shutdown message received.",
+                    type_name::<Service>()
+                    );
+                    break;
+                }
             }
+            let _ = match self.p2p_adapter {
+                Some(p2p_adapter) => p2p_adapter.close(),
+                None => Err(()),
+            };
         });
     }
 }

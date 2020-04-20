@@ -3,15 +3,14 @@ extern crate target_info;
 use clap::{App, Arg};
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
-use std::time::Duration;
 use tokio_01::prelude::future::Future;
 use tokio_02::sync::watch;
-use tokio_02::{signal, task, time};
+use tokio_02::{signal};
 
 use agent::Agent;
 use network::NetworkService;
-use p2p::{cli_app, P2PAdapter};
 use types::events::Events;
+use p2p::cli_app;
 
 const CLIENT_NAME: &str = "imp";
 const P2P_PROTOCOL_VERSION: &str = "imp/libp2p";
