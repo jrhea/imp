@@ -1,25 +1,16 @@
 use clap::ArgMatches;
-use futures::{
-    future::FutureExt, // for `.fuse()`
-    pin_mut,
-    select,
-};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
 use libp2p::core::{
     muxing::StreamMuxerBox, nodes::Substream, transport::dummy::DummyTransport, PeerId,
 };
-use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5Event};
+use libp2p::discv5::{enr, Discv5, Discv5Config};
 use libp2p::identity;
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
-use tokio_02::sync::watch;
-use tokio_02::{signal, task, time};
-
-use types::events::Events;
 
 pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
 pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
