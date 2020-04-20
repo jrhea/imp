@@ -81,7 +81,7 @@ pub fn discover_peers(arg_matches: &ArgMatches<'_>) {
     // construct a 30 second interval to search for new peers.
     let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(3));
     println!(
-        "{0: <6}{1: <14}{2: <55}{3: <66}{4: }",
+        "{0: <6}{1: <14}{2: <55}{3: <69}{4: }",
         "index", "peer_id", "node_id", "multiaddrs", "enr"
     );
 
@@ -108,7 +108,7 @@ pub fn discover_peers(arg_matches: &ArgMatches<'_>) {
                         peers.insert(node_id.clone(), (peer_id.clone(), multiaddr.clone()));
                         //let eth2 = enr.get("eth2");
                         println!(
-                            "{0: <6}{1: <14}{2: <55}{3: <66}{4: }",
+                            "{0: <6}{1: <14}{2: <55}{3: <69}{4: }",
                             peers.len(),
                             node_id,
                             peer_id,
