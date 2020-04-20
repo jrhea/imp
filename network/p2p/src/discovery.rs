@@ -53,7 +53,7 @@ pub fn discover_peers(arg_matches: &ArgMatches<'_>) {
     let config = Discv5Config::default();
 
     // the address to listen on
-    let socket_addr = SocketAddr::new(listen_address.into(), listen_port);
+    let socket_addr = SocketAddr::new(listen_address, listen_port);
 
     // construct the discv5 swarm, initializing an unused transport layer
     let discv5 = Discv5::new(local_enr, keypair.clone(), config, socket_addr).unwrap();
@@ -73,7 +73,6 @@ pub fn discover_peers(arg_matches: &ArgMatches<'_>) {
             );
             let _ = swarm.add_enr(enr);
         }
-        _ => panic!("Decoding ENR failed."),
     };
 
     let target_random_node_id = enr::NodeId::random();

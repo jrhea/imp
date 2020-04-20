@@ -8,15 +8,15 @@ use crate::types::{ChainSpec, EnrForkId, EthSpec, Hash256, MainnetEthSpec, Slot}
 
 use std::path::PathBuf;
 
-pub fn loadTestnetConfig<E: EthSpec>(testnet_dir: PathBuf) -> Eth2TestnetConfig<E> {
-    Eth2TestnetConfig::load(testnet_dir.clone()).unwrap()
+pub fn load_testnet_config<E: EthSpec>(testnet_dir: PathBuf) -> Eth2TestnetConfig<E> {
+    Eth2TestnetConfig::load(testnet_dir).unwrap()
 }
 
-pub fn getEth2Config() -> Eth2Config {
+pub fn get_eth2_config() -> Eth2Config {
     Eth2Config::mainnet()
 }
 
-pub fn getChainSpec() -> ChainSpec {
+pub fn get_chain_spec() -> ChainSpec {
     ChainSpec::mainnet()
 }
 
@@ -29,13 +29,13 @@ pub fn get_default_fork_id() -> EnrForkId {
 }
 
 pub fn get_fork_id(slot: Slot, genesis_validators_root: Hash256) -> EnrForkId {
-    let spec = getChainSpec();
+    let spec = get_chain_spec();
     spec.enr_fork_id(slot, genesis_validators_root)
 }
 
 pub fn get_fork_id_from_dir(dir: Option<PathBuf>) -> Option<EnrForkId> {
-    if !dir.is_none() && dir.clone().unwrap().exists() {
-        let config = loadTestnetConfig::<MainnetEthSpec>(dir.unwrap());
+    if let Some(value) = dir {
+        let config = load_testnet_config::<MainnetEthSpec>(value);
         let state = config.genesis_state.unwrap();
         Some(get_fork_id(state.slot, state.genesis_validators_root))
     } else {

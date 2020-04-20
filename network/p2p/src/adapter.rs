@@ -1,11 +1,10 @@
 use clap::ArgMatches;
 use slog::{debug, info, o, trace, warn};
-use std::any::type_name;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use eth2::ssz::{Decode, Encode};
-use eth2::types::EnrForkId;
+
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
 use types::events::Events;
 
@@ -78,7 +77,7 @@ impl Adapter {
                 config.network_config.topics = create_topic_ids(enr_fork_id.clone());
                 (
                     Some(enr_fork_id.clone()),
-                    enr_fork_id.clone().as_ssz_bytes(),
+                    enr_fork_id.as_ssz_bytes(),
                 )
             }
             _ => {
@@ -89,7 +88,7 @@ impl Adapter {
                         config.network_config.topics = create_topic_ids(enr_fork_id.clone());
                         (
                             Some(enr_fork_id.clone()),
-                            enr_fork_id.clone().as_ssz_bytes(),
+                            enr_fork_id.as_ssz_bytes(),
                         )
                     }
                     _ => (None, [0u8, 32].to_vec()),
