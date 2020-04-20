@@ -9,6 +9,7 @@ default = ["mothra"]
 local = ["mothra-local"]
 
 [dependencies]
+libp2p =  { git = "https://github.com/jrhea/rust-libp2p", rev = "f75a1d6e2ea696ee59b9d89328eee68eadca2524", package = "libp2p"}
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}

@@ -23,6 +23,15 @@ fn main() -> Result<(), std::io::Error> {
         .author("Jonny Rhea")
         .about("Eth2 Network Agent")
         .arg(
+            Arg::with_name("run-mode")
+                .long("run-mode")
+                .value_name("RUN_MODE")
+                .help("Controls the behaviour of imp.")
+                .takes_value(true)
+                .possible_values(&["disc", "node"])
+                .default_value("node"),
+        )
+        .arg(
             Arg::with_name("p2p-protocol-version")
                 .long("p2p-protocol-version")
                 .value_name("P2P_PROTOCOL_VERSION")
@@ -49,12 +58,14 @@ fn main() -> Result<(), std::io::Error> {
         .subcommand(cli_app())
         .get_matches();
 
+    let run_mode = arg_matches.value_of("run-mode").unwrap();
+
+    let p2p_protocol_version = arg_matches.value_of("p2p-protocol-version").unwrap();
+
     let mut testnet_dir = None;
     if let Some(testnet_dir_str) = arg_matches.value_of("testnet-dir") {
         testnet_dir = Some(PathBuf::from(testnet_dir_str));
     }
-
-    let p2p_protocol_version = arg_matches.value_of("p2p-protocol-version").unwrap();
 
     // default to this debug-level value.
     // if mothra submommand has a specific debug-level,
@@ -71,16 +82,17 @@ fn main() -> Result<(), std::io::Error> {
     let mut runtime = tokio_compat::runtime::Runtime::new()?;
 
     info!(log, "Starting imp");
-    let p2p_adapter = P2PAdapter::new(
+
+    let network_service = NetworkService::new(
+        run_mode.into(),
         &runtime.executor(),
         client_name,
         platform,
         p2p_protocol_version.into(),
         testnet_dir,
         &arg_matches,
-        log.new(o!("imp" => "P2PAdapter")),
+        log.new(o!("imp" => "NetworkService")),
     );
-    let network_service = NetworkService::new(p2p_adapter, log.new(o!("imp" => "NetworkService")));
     let agent = Agent::new(log.new(o!("imp" => "Agent")));
 
     let (shutdown_tx, shutdown_rx) = watch::channel::<Events>(Events::None);

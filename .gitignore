@@ -12,3 +12,4 @@ Cargo.lock
 
 .rustc_info.json
 **/.DS_Store
+scripts/*.txt

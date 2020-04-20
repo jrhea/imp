@@ -108,12 +108,14 @@ OPTIONS:
             Log filter. [default: info]  [possible values: info, debug, trace, warn, error, crit]
 
         --p2p-protocol-version <P2P_PROTOCOL_VERSION>    P2P protocol version to advertise. [default: imp/libp2p]
+        --run-mode <RUN_MODE>
+            Controls the behaviour of imp. [default: node]  [possible values: disc, node]
+
         --testnet-dir <DIR>                              The location of the testnet directory to use.
 
 SUBCOMMANDS:
     help      Prints this message or the help of the given subcommand(s)
     mothra    P2P networking component.
-
 
 
 > imp mothra -h

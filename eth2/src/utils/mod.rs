@@ -53,6 +53,13 @@ pub fn get_fork_id_from_enr(enr: Enr) -> Option<EnrForkId> {
     }
 }
 
+pub fn get_enr_from_string(enr: String) -> Option<Enr> {
+    match enr.parse::<Enr>() {
+        Ok(enr) => Some(enr),
+        Err(_e) => None,
+    }
+}
+
 pub fn get_fork_id_from_string(enr: String) -> Option<EnrForkId> {
     match enr.parse::<Enr>() {
         Ok(enr) => get_fork_id_from_enr(enr),
