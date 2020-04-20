@@ -65,19 +65,16 @@ impl Service {
             _ => (None, None, None),
         };
         task::spawn(async move {
-            let _ = match run_mode.as_str() {
-                "disc" => {
-                    task::spawn(async move {
-                        discovery::find_nodes(
-                            swarm.unwrap(),
-                            discovery_shutdown_rx.unwrap(),
-                            disc_log.new(o!("Network Service" => "Discovery")),
-                        )
-                        .await;
-                    });
-                }
-                _ => (),
-            };
+            if let "disc" = run_mode.as_str() {
+                task::spawn(async move {
+                    discovery::find_nodes(
+                        swarm.unwrap(),
+                        discovery_shutdown_rx.unwrap(),
+                        disc_log.new(o!("Network Service" => "Discovery")),
+                    )
+                    .await;
+                });
+            }
 
             loop {
                 if let Some(Events::ShutdownMessage) = shutdown_rx.recv().await {
@@ -90,7 +87,7 @@ impl Service {
                 }
             }
 
-            let _ = match run_mode.as_str() {
+            match run_mode.as_str() {
                 "node" => {
                     let _ = match p2p_adapter {
                         Some(p2p_adapter) => p2p_adapter.close(),
