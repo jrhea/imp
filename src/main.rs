@@ -10,7 +10,7 @@ use tokio_02::{signal, task, time};
 
 use agent::Agent;
 use network::NetworkService;
-use p2p::{cli_app, P2PService};
+use p2p::{cli_app, P2PAdapter};
 use types::events::Events;
 
 const CLIENT_NAME: &str = "imp";
@@ -71,17 +71,16 @@ fn main() -> Result<(), std::io::Error> {
     let mut runtime = tokio_compat::runtime::Runtime::new()?;
 
     info!(log, "Starting imp");
-
-    let p2p_service = P2PService::new(
+    let p2p_adapter = P2PAdapter::new(
         &runtime.executor(),
         client_name,
         platform,
         p2p_protocol_version.into(),
         testnet_dir,
         &arg_matches,
-        log.new(o!("imp" => "P2PService")),
+        log.new(o!("imp" => "P2PAdapter")),
     );
-    let network_service = NetworkService::new(log.new(o!("imp" => "NetworkService")));
+    let network_service = NetworkService::new(p2p_adapter, log.new(o!("imp" => "NetworkService")));
     let agent = Agent::new(log.new(o!("imp" => "Agent")));
 
     let (shutdown_tx, shutdown_rx) = watch::channel::<Events>(Events::None);
@@ -89,10 +88,6 @@ fn main() -> Result<(), std::io::Error> {
     // main "event loop"
     runtime.block_on_std(async move {
         async move {
-            let rx = shutdown_rx.clone();
-            task::spawn(async move {
-                p2p_service.spawn(rx).await;
-            });
             network_service.spawn(shutdown_rx.clone()).await;
             agent.spawn(shutdown_rx).await;
         }
