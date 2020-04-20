@@ -75,10 +75,7 @@ impl Adapter {
             Some(enr_fork_id) => {
                 // configure gossip topics
                 config.network_config.topics = create_topic_ids(enr_fork_id.clone());
-                (
-                    Some(enr_fork_id.clone()),
-                    enr_fork_id.as_ssz_bytes(),
-                )
+                (Some(enr_fork_id.clone()), enr_fork_id.as_ssz_bytes())
             }
             _ => {
                 // Option: Learn fork_id from supplied testnet_dir
@@ -86,10 +83,7 @@ impl Adapter {
                     Some(enr_fork_id) => {
                         // configure gossip topics
                         config.network_config.topics = create_topic_ids(enr_fork_id.clone());
-                        (
-                            Some(enr_fork_id.clone()),
-                            enr_fork_id.as_ssz_bytes(),
-                        )
+                        (Some(enr_fork_id.clone()), enr_fork_id.as_ssz_bytes())
                     }
                     _ => (None, [0u8, 32].to_vec()),
                 }

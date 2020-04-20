@@ -16,12 +16,11 @@ utils = { path = "../../utils", package="imp-utils"}
 mothra = { git = "https://github.com/prrkl/mothra", branch = "master", package = "mothra", optional = true }
 mothra-local = { path = "../../../mothra/core", package = "mothra", optional = true }
 
+tokio-compat = { version = "0.1.5", features = ["rt-full"] }
 tokio-01 = { version = "0.1.22", package = "tokio"}
-tokio-02 = { version = "0.2", features = ["full"], package = "tokio"}
+tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
 slog = { version = "2.5.2" , features = ["max_level_trace"] }
 target_info = "0.1.0"
 clap = "2.33.0"
-futures = "0.1.29"
-
-
-tokio-compat = { version = "0.1.5", features = ["rt-full"] }
+futures-01 = { version = "0.1.29", package = "futures" }
+futures = "0.3"

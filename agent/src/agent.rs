@@ -17,10 +17,10 @@ impl Agent {
         task::spawn(async move {
             loop {
                 if let Some(Events::ShutdownMessage) = shutdown_rx.recv().await {
-                    info!(
-                    self.log,
-                    "{:?}: shutdown message received.",
-                    type_name::<Agent>()
+                    warn!(
+                        self.log,
+                        "{:?}: shutdown message received.",
+                        type_name::<Agent>()
                     );
                 }
             }
