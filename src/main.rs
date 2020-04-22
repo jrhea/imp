@@ -3,7 +3,7 @@ extern crate target_info;
 use agent::Agent;
 use clap::{App, Arg};
 use network::NetworkService;
-use p2p::cli_app;
+use p2p;
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -21,15 +21,6 @@ fn main() -> Result<(), std::io::Error> {
         .version(clap::crate_version!())
         .author("Jonny Rhea")
         .about("Eth2 Network Agent")
-        .arg(
-            Arg::with_name("run-mode")
-                .long("run-mode")
-                .value_name("RUN_MODE")
-                .help("Controls the behaviour of imp.")
-                .takes_value(true)
-                .possible_values(&["disc", "node"])
-                .default_value("node"),
-        )
         .arg(
             Arg::with_name("p2p-protocol-version")
                 .long("p2p-protocol-version")
@@ -54,10 +45,9 @@ fn main() -> Result<(), std::io::Error> {
                 .possible_values(&["info", "debug", "trace", "warn", "error", "crit"])
                 .default_value("info"),
         )
-        .subcommand(cli_app())
+        .subcommand(p2p::cli_app())
+        .subcommand(p2p::crawler::cli_app())
         .get_matches();
-
-    let run_mode = arg_matches.value_of("run-mode").unwrap();
 
     let p2p_protocol_version = arg_matches.value_of("p2p-protocol-version").unwrap();
 
@@ -83,7 +73,6 @@ fn main() -> Result<(), std::io::Error> {
     info!(log, "Starting imp");
 
     let network_service = NetworkService::new(
-        run_mode.into(),
         &runtime.executor(),
         client_name,
         platform,
