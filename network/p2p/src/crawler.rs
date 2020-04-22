@@ -1,10 +1,10 @@
-use clap::ArgMatches;
+use clap::{App, AppSettings, Arg, ArgMatches};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
 use libp2p::core::{
     muxing::StreamMuxerBox, nodes::Substream, transport::dummy::DummyTransport, PeerId,
 };
-use libp2p::discv5::{enr, Discv5, Discv5Config};
+use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5ConfigBuilder};
 use libp2p::identity;
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
@@ -15,15 +15,15 @@ use std::time::Duration;
 pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
 pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
 pub type Swarm = libp2p::Swarm<Libp2pStream, Discv5Stream>;
-pub type Discovery = (
+pub type Crawler = (
     Option<Swarm>,
     Option<tokio_01::sync::oneshot::Sender<()>>,
     Option<tokio_01::sync::oneshot::Receiver<()>>,
 );
 
-pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Discovery {
+pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     // get mothra subcommand args matches
-    let mothra_arg_matches = &arg_matches.subcommand_matches("mothra").unwrap();
+    let mothra_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
     let listen_address = mothra_arg_matches
         .value_of("listen-address")
@@ -64,7 +64,20 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Discovery {
     let transport: Libp2pStream = libp2p::core::transport::dummy::DummyTransport::new();
 
     // default configuration
-    let config = Discv5Config::default();
+    
+    let config = Discv5ConfigBuilder::new()
+        .request_timeout(Duration::from_secs(4))
+        .request_retries(2) //default 1
+        .enr_update(true) // update IP based on PONG responses
+        .enr_peer_update_min(2) // prevents NAT's should be raised for mainnet   //default 10
+        .query_parallelism(5) //default 3
+        .query_peer_timeout(Duration::from_secs(2)) //default 2
+        .query_timeout(Duration::from_secs(60)) //default 60
+        .session_timeout(Duration::from_secs(86400)) //default 86400
+        .session_establish_timeout(Duration::from_secs(15)) //default 15
+        .ip_limit(false) // limits /24 IP's in buckets. Enable for mainnet
+        .ping_interval(Duration::from_secs(300))
+        .build();
 
     // the address to listen on
     let socket_addr = SocketAddr::new(listen_address, listen_port);
@@ -114,7 +127,7 @@ pub async fn find_nodes(
     tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
         loop {
             if let Ok(Async::Ready(_)) | Err(_) = shutdown_rx.poll() {
-                warn!(log, "discovery: shutdown message received.");
+                warn!(log, "crawler: shutdown message received.");
                 return Ok(Async::Ready(()));
             }
             while let Ok(Async::Ready(_)) = query_interval.poll() {
@@ -157,4 +170,35 @@ pub async fn find_nodes(
         }
         Ok(Async::NotReady)
     }));
+}
+
+
+pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
+    App::new("crawler")
+    .version(clap::crate_version!())
+    .about("ETH2 network crawler.")
+    .arg(
+        Arg::with_name("listen-address")
+            .long("listen-address")
+            .value_name("ADDRESS")
+            .help("The address the client will listen for UDP and TCP connections.")
+            .default_value("127.0.0.1")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("port")
+            .long("port")
+            .value_name("PORT")
+            .help("The TCP/UDP port to listen on.")
+            .default_value("9000")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("boot-nodes")
+            .long("boot-nodes")
+            .allow_hyphen_values(true)
+            .value_name("ENR-LIST")
+            .help("One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.")
+            .takes_value(true),
+    )
 }

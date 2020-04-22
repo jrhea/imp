@@ -1,6 +1,6 @@
 use clap::ArgMatches;
-use discovery::Discovery;
-use p2p::{discovery, P2PAdapter};
+use crawler::Crawler;
+use p2p::{crawler, P2PAdapter};
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::path::PathBuf;
@@ -11,13 +11,12 @@ use types::events::Events;
 pub struct Service {
     run_mode: String,
     p2p_adapter: Option<P2PAdapter>,
-    discovery: Discovery,
+    crawler: Crawler,
     log: slog::Logger,
 }
 
 impl Service {
     pub fn new(
-        run_mode: String,
         executor: &tokio_compat::runtime::TaskExecutor,
         client_name: String,
         platform: String,
@@ -26,7 +25,13 @@ impl Service {
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
-        let (p2p_adapter, discovery) = match run_mode.as_str() {
+        
+        let mut run_mode = "node";
+        if let Some(matches) = arg_matches.subcommand_matches("crawler") {
+            run_mode = "crawler";
+        }
+        
+        let (p2p_adapter, crawler) = match run_mode {
             "node" => (
                 Some(P2PAdapter::new(
                     &executor,
@@ -39,38 +44,38 @@ impl Service {
                 )),
                 (None, None, None),
             ),
-            "disc" => (
+            "crawler" => (
                 None,
-                discovery::init(arg_matches, log.new(o!("Network Service" => "Discovery"))),
+                crawler::init(arg_matches, log.new(o!("Network Service" => "Discovery"))),
             ),
             _ => (None, (None, None, None)),
         };
 
         Service {
-            run_mode,
+            run_mode: run_mode.into(),
             p2p_adapter,
-            discovery,
+            crawler,
             log,
         }
     }
     pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         let run_mode = self.run_mode;
         let p2p_adapter = self.p2p_adapter;
-        let discovery = self.discovery;
-        let disc_log = self.log.clone();
+        let crawler = self.crawler;
+        let crawler_log = self.log.clone();
         let service_log = self.log.clone();
-        let (swarm, discovery_shutdown_tx, discovery_shutdown_rx) = match run_mode.as_str() {
+        let (swarm, crawler_shutdown_tx, crawler_shutdown_rx) = match run_mode.as_str() {
             "node" => (None, None, None),
-            "disc" => discovery,
+            "crawler" => crawler,
             _ => (None, None, None),
         };
         task::spawn(async move {
-            if let "disc" = run_mode.as_str() {
+            if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
-                    discovery::find_nodes(
+                    crawler::find_nodes(
                         swarm.unwrap(),
-                        discovery_shutdown_rx.unwrap(),
-                        disc_log.new(o!("Network Service" => "Discovery")),
+                        crawler_shutdown_rx.unwrap(),
+                        crawler_log.new(o!("Network Service" => "Crawler")),
                     )
                     .await;
                 });
@@ -94,9 +99,9 @@ impl Service {
                         None => Err(()),
                     };
                 }
-                "disc" => {
-                    let _ = match discovery_shutdown_tx {
-                        Some(discovery_shutdown_tx) => discovery_shutdown_tx.send(()),
+                "crawler" => {
+                    let _ = match crawler_shutdown_tx {
+                        Some(crawler_shutdown_tx) => crawler_shutdown_tx.send(()),
                         None => Err(()),
                     };
                 }
