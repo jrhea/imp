@@ -88,10 +88,11 @@ This is an option for developers.  It is a convenient was to reference packages,
 
 ```
 
-Here is a glimpse of the available options:
+Here are the available cli options:
+
+**imp args:**
 
 ```
-> imp -h
 imp 0.1.0
 Jonny Rhea
 Eth2 Network Agent
@@ -108,16 +109,38 @@ OPTIONS:
             Log filter. [default: info]  [possible values: info, debug, trace, warn, error, crit]
 
         --p2p-protocol-version <P2P_PROTOCOL_VERSION>    P2P protocol version to advertise. [default: imp/libp2p]
-        --run-mode <RUN_MODE>
-            Controls the behaviour of imp. [default: node]  [possible values: disc, node]
-
         --testnet-dir <DIR>                              The location of the testnet directory to use.
 
 SUBCOMMANDS:
-    help      Prints this message or the help of the given subcommand(s)
-    mothra    P2P networking component.
+    crawler    ETH2 network crawler.
+    help       Prints this message or the help of the given subcommand(s)
+    mothra     P2P networking component.
+```
 
+**imp crawler args:**
 
+```
+> imp crawler -h
+imp-crawler 0.1.0
+ETH2 network crawler.
+
+USAGE:
+    imp crawler [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --boot-nodes <ENR-LIST>       One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.
+        --listen-address <ADDRESS>    The address the client will listen for UDP and TCP connections. [default:
+                                      127.0.0.1]
+        --port <PORT>                 The TCP/UDP port to listen on. [default: 9000]
+```
+
+**imp mothra args:**
+
+```
 > imp mothra -h
 imp-mothra 0.1.0
 P2P networking component.
@@ -141,7 +164,7 @@ OPTIONS:
                                           without an ENR.
         --listen-address <ADDRESS>        The address the client will listen for UDP and TCP connections. [default:
                                           127.0.0.1]
-        --maxpeers <maxpeers>             The maximum number of peers. [default: 10]
+        --maxpeers <maxpeers>             The maximum number of peers. [default: 50]
         --port <PORT>                     The TCP/UDP port to listen on. [default: 9000]
         --topics <STRING>                 One or more comma-delimited gossipsub topics to subscribe to.
 
