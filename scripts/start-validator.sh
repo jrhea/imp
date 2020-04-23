@@ -1,1 +1,0 @@
-./release/lighthouse vc --testnet-dir ~/.lighthouse/testnet --allow-unsynced testnet insecure 0 8

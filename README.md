@@ -80,14 +80,6 @@ This is an option for developers.  It is a convenient was to reference packages,
 
 ## How to run
 
-**Imp** is early in development and has limited functionality; however, if you want to play around with it, then I suggest running the demo script.
-
-```sh
-
-> cd scripts && sh demo.sh
-
-```
-
 Here are the available cli options:
 
 **imp args:**
