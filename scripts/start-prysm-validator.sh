@@ -1,0 +1,1 @@
+./../../clients/prysm/prysm.sh validator  --keymanager=interop --keymanageropts='{"keys":64}'
