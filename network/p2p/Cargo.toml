@@ -6,7 +6,7 @@ edition = "2018"
 
 [features]
 default = ["mothra"]
-local = ["mothra-local"]
+local = ["mothra_local"]
 
 [dependencies]
 libp2p =  { git = "https://github.com/sigp/rust-libp2p", rev = "71cf486b4d992862f5a05f9f4ef5e5c1631f4add", package = "libp2p"}
@@ -14,7 +14,7 @@ eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
 mothra = { git = "https://github.com/prrkl/mothra", branch = "master", package = "mothra", optional = true }
-mothra-local = { path = "../../../mothra/core", package = "mothra", optional = true }
+mothra_local = { path = "../../../mothra/core", package = "mothra", optional = true }
 
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
 tokio-01 = { version = "0.1.22", package = "tokio"}

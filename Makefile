@@ -24,6 +24,16 @@ release:
 
 touch: 
 	cargo update -p https://github.com/prrkl/mothra#0.1.0
+	cargo update -p tree_hash
+	cargo update -p tree_hash_derive
+	cargo update -p eth2_ssz
+	cargo update -p eth2_ssz_derive
+	cargo update -p eth2_ssz_types
+	cargo update -p types
+	cargo update -p eth2_hashing
+	cargo update -p eth2-libp2p
+	cargo update -p eth2_config
+	cargo update -p eth2_testnet_config
 
 fmt:
 	cargo fmt
