@@ -4,7 +4,7 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 debug-%: ; @echo $*=$($*)
 
-.PHONY: all debug local release fmt clean
+.PHONY: all debug local release touch fmt clean
 
 .DEFAULT: all
 
@@ -20,7 +20,6 @@ debug-local:
 
 release:
 	cargo build --release
-
 
 touch: 
 	cargo update -p https://github.com/prrkl/mothra#0.1.0

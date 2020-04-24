@@ -43,6 +43,4 @@ eth2_hashing = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", p
 eth2_libp2p = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2-libp2p" }
 eth2_config = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_config" }
 eth2_testnet_config = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_testnet_config" }
-
-#[patch."https://github.com/prrkl/mothra.git"]
-#mothra = { git = "https://github.com/prrkl/mothra", rev= "c5416fa11646d68106107b902486840054d0daa6", package = "mothra", optional = true }
+libp2p = { git = "https://github.com/sigp/rust-libp2p", rev= "71cf486b4d992862f5a05f9f4ef5e5c1631f4add", package = "libp2p" }
