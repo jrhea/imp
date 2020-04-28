@@ -6,6 +6,7 @@ use libp2p::core::{
 };
 use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5ConfigBuilder};
 use libp2p::identity;
+use eth2::utils::{get_fork_id_from_enr};
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -69,7 +70,7 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
         .request_timeout(Duration::from_secs(4))
         .request_retries(2) //default 1
         .enr_update(true) // update IP based on PONG responses
-        .enr_peer_update_min(2) // prevents NAT's should be raised for mainnet   //default 10
+        .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet   //default 10
         .query_parallelism(5) //default 3
         .query_peer_timeout(Duration::from_secs(2)) //default 2
         .query_timeout(Duration::from_secs(60)) //default 60
@@ -119,7 +120,7 @@ pub async fn find_nodes(
     let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(3));
     info!(
         log,
-        "{0: <6}{1: <14}{2: <55}{3: <69}", "index", "peer_id", "node_id", "multiaddrs",
+        "{0: <6}{1: <14}{2: <55}{3: <12}{4: <69}", "index", "node_id", "peer_id", "fork_digest", "multiaddrs",
     );
 
     let mut peers: HashMap<String, (String, String)> = Default::default();
@@ -146,13 +147,14 @@ pub async fn find_nodes(
                             .map(|m| m.to_string() + "    ")
                             .collect();
                         peers.insert(node_id.clone(), (peer_id.clone(), multiaddr.clone()));
-
+                        let fork_id = get_fork_id_from_enr(enr).unwrap();
                         info!(
                             log,
-                            "{0: <6}{1: <14}{2: <55}{3: <69}",
+                            "{0: <6}{1: <14}{2: <55}{3: <12}{4: <69}",
                             peers.len(),
                             node_id,
                             peer_id,
+                            hex::encode(&fork_id.fork_digest),
                             multiaddr,
                         );
                     }
