@@ -80,7 +80,25 @@ This is an option for developers.  It is a convenient was to reference packages,
 
 ## How to run
 
-Here are the available cli options:
+There are two modes of operation:
+
+### crawler
+
+This mode will have imp crawl the DHT of an eth2 testnet and print out the nodes found.  Try out one of the crawler scripts to see how it works:
+
+```
+> cd scripts && sh crawl-topaz.sh
+```
+
+### agent
+
+This mode is designed to have imp impersonate an eth2 node and listen to gossip messages on the network. Try the following script to learn more:
+
+```
+> cd scripts && sh connect-imp-topaz.sh
+```
+
+### cli options:
 
 **imp args:**
 
