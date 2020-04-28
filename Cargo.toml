@@ -10,7 +10,7 @@ include = [
 
 [features]
 default = []
-local = ["p2p/local"]
+#local = ["p2p/local"]
 
 
 [dependencies]

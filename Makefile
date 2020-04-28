@@ -4,7 +4,7 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 debug-%: ; @echo $*=$($*)
 
-.PHONY: all debug local release touch fmt clean
+.PHONY: all debug local release docker touch fmt clean
 
 .DEFAULT: all
 
@@ -20,6 +20,9 @@ debug-local:
 
 release:
 	cargo build --release
+
+docker: 
+	docker run --rm --user "$(id -u)":"$(id -g)" -v "$PWD":/usr/src/imp -w /usr/src/imp rust:latest make
 
 touch: 
 	cargo update -p https://github.com/prrkl/mothra#0.1.0
