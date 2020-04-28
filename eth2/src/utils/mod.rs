@@ -43,7 +43,7 @@ pub fn get_fork_id_from_dir(dir: Option<PathBuf>) -> Option<EnrForkId> {
     }
 }
 
-pub fn get_fork_id_from_enr(enr: Enr) -> Option<EnrForkId> {
+pub fn get_fork_id_from_enr(enr: &Enr) -> Option<EnrForkId> {
     match enr.get("eth2") {
         Some(enr_fork_id) => match EnrForkId::from_ssz_bytes(enr_fork_id) {
             Ok(enr_fork_id) => Some(enr_fork_id),
@@ -62,7 +62,7 @@ pub fn get_enr_from_string(enr: String) -> Option<Enr> {
 
 pub fn get_fork_id_from_string(enr: String) -> Option<EnrForkId> {
     match enr.parse::<Enr>() {
-        Ok(enr) => get_fork_id_from_enr(enr),
+        Ok(enr) => get_fork_id_from_enr(&enr),
         Err(_e) => None,
     }
 }
