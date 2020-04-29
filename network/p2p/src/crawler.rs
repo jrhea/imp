@@ -23,6 +23,7 @@ pub type Crawler = (
 );
 
 pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
+
     // get mothra subcommand args matches
     let mothra_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -120,7 +121,7 @@ pub async fn find_nodes(
     let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(3));
     info!(
         log,
-        "{0: <6}{1: <14}{2: <55}{3: <12}{4: <69}", "index", "node_id", "peer_id", "fork_digest", "multiaddrs",
+        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "multiaddrs",
     );
 
     let mut peers: HashMap<String, (String, String)> = Default::default();
@@ -141,6 +142,7 @@ pub async fn find_nodes(
 
                     if !peers.contains_key(&node_id) {
                         let peer_id = enr.peer_id().clone().to_string();
+                        let seq_no = enr.seq().clone().to_string();
                         let multiaddr: String = enr
                             .multiaddr()
                             .iter()
@@ -150,11 +152,12 @@ pub async fn find_nodes(
                         let fork_id = get_fork_id_from_enr(enr).unwrap();
                         info!(
                             log,
-                            "{0: <6}{1: <14}{2: <55}{3: <12}{4: <69}",
+                            "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <69}",
                             peers.len(),
                             node_id,
                             peer_id,
                             hex::encode(&fork_id.fork_digest),
+                            seq_no,
                             multiaddr,
                         );
                     }
