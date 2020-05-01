@@ -6,7 +6,7 @@ use libp2p::core::{
 };
 use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5ConfigBuilder};
 use libp2p::identity;
-use eth2::utils::{get_fork_id_from_enr};
+use eth2::utils::{get_fork_id_from_enr, get_attnets_from_enr, get_bitfield_from_enr};
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -118,13 +118,13 @@ pub async fn find_nodes(
     let target_random_node_id = enr::NodeId::random();
     swarm.find_node(target_random_node_id);
     // construct a time interval to search for new peers.
-    let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(3));
+    let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(10));
     info!(
         log,
-        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "multiaddrs",
+        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "enr_attnets", "multiaddrs",
     );
 
-    let mut peers: HashMap<String, (String, String)> = Default::default();
+    let mut peers: HashMap<String, (String, String, String, String, String)> = Default::default();
 
     tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
         loop {
@@ -139,28 +139,40 @@ pub async fn find_nodes(
 
                 for enr in swarm.enr_entries() {
                     let node_id = enr.node_id().clone().to_string();
+                    let peer_id = enr.peer_id().clone().to_string();
+                    let seq_no = enr.seq().clone().to_string();
+                    let multiaddr: String = enr
+                        .multiaddr()
+                        .iter()
+                        .map(|m| m.to_string() + "    ")
+                        .collect();
+                    
+                    let fork_id = get_fork_id_from_enr(enr).unwrap();
+                    let fork_digest = hex::encode(&fork_id.fork_digest);
+                    let attnets = format!("{:?}",get_attnets_from_enr(enr));
 
-                    if !peers.contains_key(&node_id) {
-                        let peer_id = enr.peer_id().clone().to_string();
-                        let seq_no = enr.seq().clone().to_string();
-                        let multiaddr: String = enr
-                            .multiaddr()
-                            .iter()
-                            .map(|m| m.to_string() + "    ")
-                            .collect();
-                        peers.insert(node_id.clone(), (peer_id.clone(), multiaddr.clone()));
-                        let fork_id = get_fork_id_from_enr(enr).unwrap();
-                        info!(
-                            log,
-                            "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <69}",
-                            peers.len(),
-                            node_id,
-                            peer_id,
-                            hex::encode(&fork_id.fork_digest),
-                            seq_no,
-                            multiaddr,
-                        );
-                    }
+                    let peer = peers.entry(node_id.clone()).or_default();
+                    *peer = (peer_id.clone(), fork_digest.clone(), seq_no.clone(), attnets.clone(), multiaddr.clone());
+
+                }
+                let mut i=1;
+                info!(
+                    log,
+                    "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "enr_attnets", "multiaddrs",
+                );
+                for (key,value) in &peers{
+                    info!(
+                        log,
+                        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}",
+                        i,
+                        key,
+                        value.0,
+                        value.1,
+                        value.2,
+                        value.3,
+                        value.4,
+                    );
+                    i += 1;
                 }
                 // execute a FINDNODE query
                 swarm.find_node(target_random_node_id);

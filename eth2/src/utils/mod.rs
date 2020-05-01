@@ -1,8 +1,11 @@
 use crate::config::Eth2Config;
 use crate::libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
 use crate::libp2p::Enr;
+use crate::libp2p::Eth2Enr;
 use crate::libp2p::NetworkConfig;
+use crate::libp2p::types::EnrBitfield;
 use crate::ssz::{Decode, Encode};
+use crate::ssz::types::{BitVector};
 use crate::testnet::config::Eth2TestnetConfig;
 use crate::types::{ChainSpec, EnrForkId, EthSpec, Hash256, MainnetEthSpec, Slot};
 
@@ -50,6 +53,29 @@ pub fn get_fork_id_from_enr(enr: &Enr) -> Option<EnrForkId> {
             Err(_e) => None,
         },
         None => None,
+    }
+}
+
+pub fn get_attnets_from_enr(enr: &Enr) -> Vec<u64> {
+    let mut attnets = vec![];
+    if let Ok(bitfield) = enr.bitfield::<MainnetEthSpec>() {
+        if bitfield.len() > 0 {
+            let subnet_count = get_chain_spec().attestation_subnet_count as usize;
+            for i in 0..= subnet_count {
+                match bitfield.get(i) {
+                    Ok(true) => attnets.push(i as u64),
+                    _ => ()
+                }
+            }
+        } 
+    }
+    return attnets;
+}
+
+pub fn get_bitfield_from_enr(enr: &Enr) -> Vec<u8> {
+    match enr.get("attnets"){
+        Some(bitfield) => bitfield.clone(),
+        _ => vec![]
     }
 }
 
