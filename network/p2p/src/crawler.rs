@@ -1,9 +1,9 @@
 use csv;
 #[macro_use]
 use serde_derive::{Serialize};
-use std::io;
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
+use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
 use libp2p::core::{
@@ -11,14 +11,14 @@ use libp2p::core::{
 };
 use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5ConfigBuilder};
 use libp2p::identity;
-use eth2::utils::{get_fork_id_from_enr, get_attnets_from_enr, get_bitfield_from_enr};
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::net::{IpAddr, SocketAddr};
-use std::time::Duration;
 use std::fs::OpenOptions;
+use std::io;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::time::Duration;
 
 pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
 pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
@@ -27,7 +27,7 @@ pub type Crawler = (
     Option<Swarm>,
     Option<tokio_01::sync::oneshot::Sender<()>>,
     Option<tokio_01::sync::oneshot::Receiver<()>>,
-    Option<PathBuf>
+    Option<PathBuf>,
 );
 
 //"index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
@@ -46,11 +46,10 @@ struct Record {
     udp6: String,
     fork_digest: String,
     seq_no: String,
-    subnet_ids: String
+    subnet_ids: String,
 }
 
 pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
-
     // get mothra subcommand args matches
     let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -62,7 +61,7 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join(".imp")
                 .join("output")
-    });
+        });
 
     let listen_address = crawler_arg_matches
         .value_of("listen-address")
@@ -77,7 +76,8 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
         .expect("Invalid listening port");
 
     let boot_enr_list = if crawler_arg_matches.is_present("boot-nodes") {
-        crawler_arg_matches.value_of("boot-nodes")
+        crawler_arg_matches
+            .value_of("boot-nodes")
             .unwrap()
             .split(',')
             .map(|x| x.into())
@@ -124,7 +124,7 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     let mut swarm: Swarm = libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
 
     // if we know of another peer's ENR, add it known peers
-    for enr_str in boot_enr_list{
+    for enr_str in boot_enr_list {
         let _ = match enr_str
             .parse::<enr::Enr<enr::CombinedKey>>()
             .expect("Invalid base64 encoded ENR")
@@ -167,71 +167,71 @@ pub async fn find_nodes(
             }
             while let Ok(Async::Ready(_)) = query_interval.poll() {
                 let file = OpenOptions::new()
-                .write(true)
-                .create(true)
-                .append(false)
-                .open(datadir.join("crawler.csv"))
-                .unwrap();
+                    .write(true)
+                    .create(true)
+                    .append(false)
+                    .open(datadir.join("crawler.csv"))
+                    .unwrap();
                 let mut wtr = csv::Writer::from_writer(file);
                 let mut index = 1;
-                let timestamp = format!("{}",Local::now().format("%Y-%m-%d][%H:%M:%S"));
+                let timestamp = format!("{}", Local::now().format("%Y-%m-%d][%H:%M:%S"));
                 // pick a random node target
                 let target_random_node_id = enr::NodeId::random();
                 //println!("Connected Peers: {}", swarm.connected_peers());
 
                 for enr in swarm.enr_entries() {
                     let ip4: String = match enr.ip() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string()
-                        };
+                        Some(x) => x.to_string(),
+                        _ => "".to_string(),
+                    };
                     let tcp4: String = match enr.tcp() {
                         Some(x) => x.to_string(),
-                        _ => "".to_string()
+                        _ => "".to_string(),
                     };
                     let udp4: String = match enr.udp() {
                         Some(x) => x.to_string(),
-                        _ => "".to_string()
+                        _ => "".to_string(),
                     };
                     let ip6: String = match enr.ip6() {
                         Some(x) => x.to_string(),
-                        _ => "".to_string()
+                        _ => "".to_string(),
                     };
                     let tcp6: String = match enr.tcp6() {
                         Some(x) => x.to_string(),
-                        _ => "".to_string()
+                        _ => "".to_string(),
                     };
                     let udp6: String = match enr.udp6() {
                         Some(x) => x.to_string(),
-                        _ => "".to_string()
+                        _ => "".to_string(),
                     };
                     let node_id = hex::encode(enr.node_id().clone().raw());
                     let peer_id = enr.peer_id().clone().to_string();
-                    let seq_no = enr.seq().clone().to_string();                  
+                    let seq_no = enr.seq().clone().to_string();
                     let fork_id = get_fork_id_from_enr(enr).unwrap();
                     let fork_digest = hex::encode(&fork_id.fork_digest);
-                    let subnet_ids = format!("{:?}",get_attnets_from_enr(enr));
+                    let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
 
                     let record = peers.entry(node_id.clone()).or_default();
                     *record = Record {
-                        index, 
+                        index,
                         timestamp: timestamp.clone(),
                         node_id: node_id.clone(),
-                        peer_id: peer_id.clone(), 
-                        ip4: ip4.clone(), 
-                        tcp4: tcp4.clone(), 
-                        udp4: udp4.clone(), 
-                        ip6: ip6.clone(), 
-                        tcp6: tcp6.clone(), 
-                        udp6: udp6.clone(), 
-                        fork_digest: fork_digest.clone(), 
-                        seq_no: seq_no.clone(), 
-                        subnet_ids: subnet_ids.clone()
+                        peer_id: peer_id.clone(),
+                        ip4: ip4.clone(),
+                        tcp4: tcp4.clone(),
+                        udp4: udp4.clone(),
+                        ip6: ip6.clone(),
+                        tcp6: tcp6.clone(),
+                        udp6: udp6.clone(),
+                        fork_digest: fork_digest.clone(),
+                        seq_no: seq_no.clone(),
+                        subnet_ids: subnet_ids.clone(),
                     };
                     let _ = wtr.serialize(record);
                     let _ = wtr.flush();
                     index += 1;
                 }
-                
+
                 // execute a FINDNODE query
                 swarm.find_node(target_random_node_id);
             }
@@ -246,7 +246,6 @@ pub async fn find_nodes(
         Ok(Async::NotReady)
     }));
 }
-
 
 pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
     App::new("crawler")

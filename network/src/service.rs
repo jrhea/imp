@@ -25,12 +25,11 @@ impl Service {
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
-        
         let mut run_mode = "node";
         if let Some(matches) = arg_matches.subcommand_matches("crawler") {
             run_mode = "crawler";
         }
-        
+
         let (p2p_adapter, crawler) = match run_mode {
             "node" => (
                 Some(P2PAdapter::new(
