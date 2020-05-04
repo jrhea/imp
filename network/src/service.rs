@@ -42,13 +42,13 @@ impl Service {
                     &arg_matches,
                     log.new(o!("NetworkService" => "P2PAdapter")),
                 )),
-                (None, None, None),
+                (None, None, None, None),
             ),
             "crawler" => (
                 None,
                 crawler::init(arg_matches, log.new(o!("Network Service" => "Discovery"))),
             ),
-            _ => (None, (None, None, None)),
+            _ => (None, (None, None, None, None)),
         };
 
         Service {
@@ -64,10 +64,10 @@ impl Service {
         let crawler = self.crawler;
         let crawler_log = self.log.clone();
         let service_log = self.log.clone();
-        let (swarm, crawler_shutdown_tx, crawler_shutdown_rx) = match run_mode.as_str() {
-            "node" => (None, None, None),
+        let (swarm, crawler_shutdown_tx, crawler_shutdown_rx, datadir) = match run_mode.as_str() {
+            "node" => (None, None, None, None),
             "crawler" => crawler,
-            _ => (None, None, None),
+            _ => (None, None, None, None),
         };
         task::spawn(async move {
             if let "crawler" = run_mode.as_str() {
@@ -75,6 +75,7 @@ impl Service {
                     crawler::find_nodes(
                         swarm.unwrap(),
                         crawler_shutdown_rx.unwrap(),
+                        datadir.unwrap(),
                         crawler_log.new(o!("Network Service" => "Crawler")),
                     )
                     .await;

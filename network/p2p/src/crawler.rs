@@ -1,3 +1,8 @@
+use csv;
+#[macro_use]
+use serde_derive::{Serialize};
+use std::io;
+use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
@@ -12,6 +17,8 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
+use std::fs::OpenOptions;
+use std::path::PathBuf;
 
 pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
 pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
@@ -20,27 +27,57 @@ pub type Crawler = (
     Option<Swarm>,
     Option<tokio_01::sync::oneshot::Sender<()>>,
     Option<tokio_01::sync::oneshot::Receiver<()>>,
+    Option<PathBuf>
 );
+
+//"index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
+
+#[derive(Serialize, Default)]
+struct Record {
+    index: u32,
+    timestamp: String,
+    node_id: String,
+    peer_id: String,
+    ip4: String,
+    tcp4: String,
+    udp4: String,
+    ip6: String,
+    tcp6: String,
+    udp6: String,
+    fork_digest: String,
+    seq_no: String,
+    subnet_ids: String
+}
 
 pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
 
     // get mothra subcommand args matches
-    let mothra_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
+    let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
-    let listen_address = mothra_arg_matches
+    let datadir = crawler_arg_matches
+        .value_of("datadir")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".imp")
+                .join("output")
+    });
+
+    let listen_address = crawler_arg_matches
         .value_of("listen-address")
         .expect("required parameter")
         .parse::<IpAddr>()
         .expect("Invalid listening address");
 
-    let listen_port = mothra_arg_matches
+    let listen_port = crawler_arg_matches
         .value_of("port")
         .expect("required parameter")
         .parse::<u16>()
         .expect("Invalid listening port");
 
-    let boot_enr_list = if mothra_arg_matches.is_present("boot-nodes") {
-        mothra_arg_matches.value_of("boot-nodes")
+    let boot_enr_list = if crawler_arg_matches.is_present("boot-nodes") {
+        crawler_arg_matches.value_of("boot-nodes")
             .unwrap()
             .split(',')
             .map(|x| x.into())
@@ -65,8 +102,6 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     // unused transport for building a swarm
     let transport: Libp2pStream = libp2p::core::transport::dummy::DummyTransport::new();
 
-    // default configuration
-    
     let config = Discv5ConfigBuilder::new()
         .request_timeout(Duration::from_secs(4))
         .request_retries(2) //default 1
@@ -99,12 +134,13 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     }
 
     let (tx, rx) = tokio_01::sync::oneshot::channel::<()>();
-    (Some(swarm), Some(tx), Some(rx))
+    (Some(swarm), Some(tx), Some(rx), Some(datadir))
 }
 
 pub async fn find_nodes(
     mut swarm: Swarm,
     mut shutdown_rx: tokio_01::sync::oneshot::Receiver<()>,
+    datadir: PathBuf,
     log: slog::Logger,
 ) {
     if let Some(enr) = swarm.enr_entries().next() {
@@ -121,12 +157,7 @@ pub async fn find_nodes(
     swarm.find_node(target_random_node_id);
     // construct a time interval to search for new peers.
     let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(5));
-    info!(
-        log,
-        "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}", "index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
-    );
-
-    let mut peers: HashMap<String, (String, String, String, String, String, String, String, String, String, String, String)> = Default::default();
+    let mut peers: HashMap<String, Record> = Default::default();
 
     tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
         loop {
@@ -135,6 +166,15 @@ pub async fn find_nodes(
                 return Ok(Async::Ready(()));
             }
             while let Ok(Async::Ready(_)) = query_interval.poll() {
+                let file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(false)
+                .open(datadir.join("crawler.csv"))
+                .unwrap();
+                let mut wtr = csv::Writer::from_writer(file);
+                let mut index = 1;
+                let timestamp = format!("{}",Local::now().format("%Y-%m-%d][%H:%M:%S"));
                 // pick a random node target
                 let target_random_node_id = enr::NodeId::random();
                 //println!("Connected Peers: {}", swarm.connected_peers());
@@ -166,45 +206,32 @@ pub async fn find_nodes(
                     };
                     let node_id = hex::encode(enr.node_id().clone().raw());
                     let peer_id = enr.peer_id().clone().to_string();
-                    let seq_no = enr.seq().clone().to_string();
-                    let multiaddr: String = enr
-                        .multiaddr()
-                        .iter()
-                        .map(|m| m.to_string() + "    ")
-                        .collect();
-                    
+                    let seq_no = enr.seq().clone().to_string();                  
                     let fork_id = get_fork_id_from_enr(enr).unwrap();
                     let fork_digest = hex::encode(&fork_id.fork_digest);
-                    let attnets = format!("{:?}",get_attnets_from_enr(enr));
+                    let subnet_ids = format!("{:?}",get_attnets_from_enr(enr));
 
-                    let peer = peers.entry(node_id.clone()).or_default();
-                    *peer = (node_id.clone(), peer_id.clone(), ip4.clone(), tcp4.clone(), udp4.clone(), ip6.clone(), tcp6.clone(), udp6.clone(), fork_digest.clone(), seq_no.clone(), attnets.clone());
-
+                    let record = peers.entry(node_id.clone()).or_default();
+                    *record = Record {
+                        index, 
+                        timestamp: timestamp.clone(),
+                        node_id: node_id.clone(),
+                        peer_id: peer_id.clone(), 
+                        ip4: ip4.clone(), 
+                        tcp4: tcp4.clone(), 
+                        udp4: udp4.clone(), 
+                        ip6: ip6.clone(), 
+                        tcp6: tcp6.clone(), 
+                        udp6: udp6.clone(), 
+                        fork_digest: fork_digest.clone(), 
+                        seq_no: seq_no.clone(), 
+                        subnet_ids: subnet_ids.clone()
+                    };
+                    let _ = wtr.serialize(record);
+                    let _ = wtr.flush();
+                    index += 1;
                 }
-                let mut i=1;
-                info!(
-                    log,
-                    "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}", "index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
-                );
-                for (_,value) in &peers{
-                    info!(
-                        log,
-                        "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}",
-                        i,
-                        value.0,
-                        value.1,
-                        value.2,
-                        value.3,
-                        value.4,
-                        value.5,
-                        value.6,
-                        value.7,
-                        value.8,
-                        value.9,
-                        value.10
-                    );
-                    i += 1;
-                }
+                
                 // execute a FINDNODE query
                 swarm.find_node(target_random_node_id);
             }
@@ -225,6 +252,13 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
     App::new("crawler")
     .version(clap::crate_version!())
     .about("ETH2 network crawler.")
+    .arg(
+        Arg::with_name("datadir")
+            .long("datadir")
+            .value_name("DIR")
+            .help("The location of the data directory to use.")
+            .takes_value(true)
+    )
     .arg(
         Arg::with_name("listen-address")
             .long("listen-address")
