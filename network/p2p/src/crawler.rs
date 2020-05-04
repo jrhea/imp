@@ -167,6 +167,7 @@ pub async fn find_nodes(
             }
             while let Ok(Async::Ready(_)) = query_interval.poll() {
                 let file = OpenOptions::new()
+                    .truncate(true)
                     .write(true)
                     .create(true)
                     .append(false)
