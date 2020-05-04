@@ -39,12 +39,12 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
         .parse::<u16>()
         .expect("Invalid listening port");
 
-    let bootstrap_enr_str: String = if mothra_arg_matches.is_present("boot-nodes") {
-        let boot_enr_list = mothra_arg_matches.value_of("boot-nodes").unwrap();
-        boot_enr_list
+    let boot_enr_list = if mothra_arg_matches.is_present("boot-nodes") {
+        mothra_arg_matches.value_of("boot-nodes")
+            .unwrap()
             .split(',')
             .map(|x| x.into())
-            .collect::<Vec<String>>()[0]
+            .collect::<Vec<String>>()
             .clone()
     } else {
         Default::default()
@@ -89,12 +89,14 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     let mut swarm: Swarm = libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
 
     // if we know of another peer's ENR, add it known peers
-    let _ = match bootstrap_enr_str
-        .parse::<enr::Enr<enr::CombinedKey>>()
-        .expect("Invalid base64 encoded ENR")
-    {
-        enr => swarm.add_enr(enr),
-    };
+    for enr_str in boot_enr_list{
+        let _ = match enr_str
+            .parse::<enr::Enr<enr::CombinedKey>>()
+            .expect("Invalid base64 encoded ENR")
+        {
+            enr => swarm.add_enr(enr),
+        };
+    }
 
     let (tx, rx) = tokio_01::sync::oneshot::channel::<()>();
     (Some(swarm), Some(tx), Some(rx))
@@ -118,13 +120,13 @@ pub async fn find_nodes(
     let target_random_node_id = enr::NodeId::random();
     swarm.find_node(target_random_node_id);
     // construct a time interval to search for new peers.
-    let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(10));
+    let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(5));
     info!(
         log,
-        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "enr_attnets", "multiaddrs",
+        "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}", "index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
     );
 
-    let mut peers: HashMap<String, (String, String, String, String, String)> = Default::default();
+    let mut peers: HashMap<String, (String, String, String, String, String, String, String, String, String, String, String)> = Default::default();
 
     tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
         loop {
@@ -138,7 +140,31 @@ pub async fn find_nodes(
                 //println!("Connected Peers: {}", swarm.connected_peers());
 
                 for enr in swarm.enr_entries() {
-                    let node_id = enr.node_id().clone().to_string();
+                    let ip4: String = match enr.ip() {
+                            Some(x) => x.to_string(),
+                            _ => "".to_string()
+                        };
+                    let tcp4: String = match enr.tcp() {
+                        Some(x) => x.to_string(),
+                        _ => "".to_string()
+                    };
+                    let udp4: String = match enr.udp() {
+                        Some(x) => x.to_string(),
+                        _ => "".to_string()
+                    };
+                    let ip6: String = match enr.ip6() {
+                        Some(x) => x.to_string(),
+                        _ => "".to_string()
+                    };
+                    let tcp6: String = match enr.tcp6() {
+                        Some(x) => x.to_string(),
+                        _ => "".to_string()
+                    };
+                    let udp6: String = match enr.udp6() {
+                        Some(x) => x.to_string(),
+                        _ => "".to_string()
+                    };
+                    let node_id = hex::encode(enr.node_id().clone().raw());
                     let peer_id = enr.peer_id().clone().to_string();
                     let seq_no = enr.seq().clone().to_string();
                     let multiaddr: String = enr
@@ -152,25 +178,30 @@ pub async fn find_nodes(
                     let attnets = format!("{:?}",get_attnets_from_enr(enr));
 
                     let peer = peers.entry(node_id.clone()).or_default();
-                    *peer = (peer_id.clone(), fork_digest.clone(), seq_no.clone(), attnets.clone(), multiaddr.clone());
+                    *peer = (node_id.clone(), peer_id.clone(), ip4.clone(), tcp4.clone(), udp4.clone(), ip6.clone(), tcp6.clone(), udp6.clone(), fork_digest.clone(), seq_no.clone(), attnets.clone());
 
                 }
                 let mut i=1;
                 info!(
                     log,
-                    "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}", "index", "node_id", "peer_id", "enr_fork_digest", "enr_seq", "enr_attnets", "multiaddrs",
+                    "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}", "index", "node_id", "peer_id", "ip4", "tcp4", "udp4", "ip6", "tcp6", "udp6", "enr_fork_digest", "enr_seq", "subnet_ids",
                 );
-                for (key,value) in &peers{
+                for (_,value) in &peers{
                     info!(
                         log,
-                        "{0: <6}{1: <14}{2: <55}{3: <16}{4: <8}{5: <20}{6: <69}",
+                        "{0: <6}{1: <70}{2: <55}{3: <16}{4: <8}{5: <8}{6: <40}{7: <8}{8: <8}{9: <16}{10: <8}{11: <20}",
                         i,
-                        key,
                         value.0,
                         value.1,
                         value.2,
                         value.3,
                         value.4,
+                        value.5,
+                        value.6,
+                        value.7,
+                        value.8,
+                        value.9,
+                        value.10
                     );
                     i += 1;
                 }
