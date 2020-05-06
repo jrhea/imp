@@ -124,13 +124,20 @@ pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
     let discv5 = Discv5::new(local_enr, keypair.clone(), config, socket_addr).unwrap();
     let mut swarm: Swarm = libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
 
+    info!(log,"Found {} bootstrap enrs", boot_enr_list.len());
     // if we know of another peer's ENR, add it known peers
     for enr_str in boot_enr_list {
         let _ = match enr_str
             .parse::<enr::Enr<enr::CombinedKey>>()
-            .expect("Invalid base64 encoded ENR")
         {
-            enr => swarm.add_enr(enr),
+            Ok(enr) => {
+                trace!(log, "Added {} to list of bootstrap enrs", enr_str);
+                swarm.add_enr(enr)
+            },
+            Err(_) => {
+                trace!(log, "Failed to add {} to list of bootstrap enrs", enr_str);
+                Ok(())
+            }
         };
     }
 
@@ -154,6 +161,10 @@ pub async fn find_nodes(
         );
     }
 
+    let output_file = match swarm.local_enr().udp() {
+        Some(x) => format!("crawler{}.csv", x),
+        _ => format!("crawler.csv")
+    };
     let target_random_node_id = enr::NodeId::random();
     swarm.find_node(target_random_node_id);
     // construct a time interval to search for new peers.
@@ -172,7 +183,7 @@ pub async fn find_nodes(
                     .write(true)
                     .create(true)
                     .append(false)
-                    .open(datadir.join("crawler.csv"))
+                    .open(datadir.join(&output_file))
                     .unwrap();
                 let mut wtr = csv::Writer::from_writer(file);
                 let mut index = 1;
