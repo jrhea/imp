@@ -47,6 +47,7 @@ struct Record {
     fork_digest: String,
     seq_no: String,
     subnet_ids: String,
+    enr: String
 }
 
 pub fn init(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Crawler {
@@ -208,10 +209,11 @@ pub async fn find_nodes(
                     let node_id = hex::encode(enr.node_id().clone().raw());
                     let peer_id = enr.peer_id().clone().to_string();
                     let seq_no = enr.seq().clone().to_string();
-                    let fork_id = get_fork_id_from_enr(enr).unwrap();
-                    let fork_digest = hex::encode(&fork_id.fork_digest);
+                    let fork_digest = match get_fork_id_from_enr(enr) {
+                        Some(x) => hex::encode(&x.fork_digest),
+                        _ => "".to_string(),
+                    };
                     let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
-
                     let record = peers.entry(node_id.clone()).or_default();
                     *record = Record {
                         index,
@@ -227,6 +229,7 @@ pub async fn find_nodes(
                         fork_digest: fork_digest.clone(),
                         seq_no: seq_no.clone(),
                         subnet_ids: subnet_ids.clone(),
+                        enr: enr.to_base64()
                     };
                     let _ = wtr.serialize(record);
                     let _ = wtr.flush();
