@@ -84,10 +84,10 @@ There are two modes of operation:
 
 ### crawler
 
-This mode will have imp crawl the DHT of an eth2 testnet and print out the nodes found.  Try out one of the crawler scripts to see how it works:
+This mode will have imp crawl the DHT of an eth2 testnet and output info to a csv
 
 ```
-> cd scripts && sh crawl-topaz.sh
+> cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers
 ```
 
 ### agent
@@ -143,6 +143,7 @@ FLAGS:
 
 OPTIONS:
         --boot-nodes <ENR-LIST>       One or more comma-delimited base64-encoded ENR's to bootstrap the p2p network.
+        --datadir <DIR>               The location of the data directory to use.
         --listen-address <ADDRESS>    The address the client will listen for UDP and TCP connections. [default:
                                       127.0.0.1]
         --port <PORT>                 The TCP/UDP port to listen on. [default: 9000]
