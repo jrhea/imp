@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Usage: sh crawl-network.sh schlesi|topaz num_crawlers
+# Usage: sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory
 
 trap post_process EXIT
 
 function post_process() {
     echo "Post processing starting..."
-    rm -r $DATA_DIR/enrs.txt
+    rm -f $DATA_DIR/enrs.txt
     # group by node-id, seq_no, taking the highest seq no in each group and saving the enr
     tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' |  cut -d',' -f3,12,14 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
     echo "Post processing complete"
@@ -17,6 +17,7 @@ function post_process() {
 
 NETWORK=$1
 NUM_CRAWLERS=$2
+OUTPUT_MODE=$3
 
 FORK_DIGEST=
 BOOTSTRAP_BOOTNODES=
@@ -42,12 +43,12 @@ else
     BOOTNODES=$BOOTSTRAP_BOOTNODES
 fi
 
-rm $DATA_DIR/crawler*
+rm -f $DATA_DIR/crawler*
 PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
     echo cat $DATA_DIR/crawler$PORT.csv
     #RUST_LOG=libp2p_discv5=debug
-    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --datadir $DATA_DIR --listen-address $(ipconfig getifaddr en0) --port $PORT --boot-nodes $BOOTNODES &
+    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $(ipconfig getifaddr en0) --port $PORT --boot-nodes $BOOTNODES &
     let PORT++;
 done
 

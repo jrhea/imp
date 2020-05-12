@@ -11,7 +11,8 @@ use types::events::Events;
 pub struct Service {
     run_mode: String,
     p2p_adapter: Option<P2PAdapter>,
-    crawler: Crawler,
+    crawler: Option<Crawler>,
+    shutdown_tx: Option<tokio_01::sync::oneshot::Sender<()>>,
     log: slog::Logger,
 }
 
@@ -30,7 +31,7 @@ impl Service {
             run_mode = "crawler";
         }
 
-        let (p2p_adapter, crawler) = match run_mode {
+        let (p2p_adapter, crawler, shutdown_tx) = match run_mode {
             "node" => (
                 Some(P2PAdapter::new(
                     &executor,
@@ -41,40 +42,39 @@ impl Service {
                     &arg_matches,
                     log.new(o!("NetworkService" => "P2PAdapter")),
                 )),
-                (None, None, None, None),
-            ),
-            "crawler" => (
                 None,
-                crawler::init(arg_matches, log.new(o!("Network Service" => "Discovery"))),
+                None
             ),
-            _ => (None, (None, None, None, None)),
+            "crawler" => {
+                let (crawler, tx) = Crawler::new(arg_matches, log.new(o!("Network Service" => "Discovery")));
+                (
+                    None,
+                    Some(crawler),
+                    Some(tx)
+                )
+            },
+            _ => (None, None, None),
         };
 
         Service {
             run_mode: run_mode.into(),
             p2p_adapter,
             crawler,
+            shutdown_tx,
             log,
         }
     }
     pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         let run_mode = self.run_mode;
         let p2p_adapter = self.p2p_adapter;
-        let crawler = self.crawler;
+        let crawler = self.crawler.unwrap();
+        let crawler_shutdown_tx = self.shutdown_tx;
         let crawler_log = self.log.clone();
         let service_log = self.log.clone();
-        let (swarm, crawler_shutdown_tx, crawler_shutdown_rx, datadir) = match run_mode.as_str() {
-            "node" => (None, None, None, None),
-            "crawler" => crawler,
-            _ => (None, None, None, None),
-        };
         task::spawn(async move {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
-                    crawler::find_nodes(
-                        swarm.unwrap(),
-                        crawler_shutdown_rx.unwrap(),
-                        datadir.unwrap(),
+                    crawler.find_nodes(
                         crawler_log.new(o!("Network Service" => "Crawler")),
                     )
                     .await;

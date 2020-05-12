@@ -87,7 +87,7 @@ There are two modes of operation:
 This mode will have imp crawl the DHT of an eth2 testnet and output info to a csv
 
 ```
-> cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers
+> cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory
 ```
 
 ### agent
