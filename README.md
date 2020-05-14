@@ -58,26 +58,18 @@ For convenience, a Makefile is provided to alias the different build options wit
 
 This build target is for developers and used (obviously) for debugging.
 
-#### docker
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docker command: &nbsp;&nbsp;&nbsp;`make debug-docker`
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make debug-docker`
-
-#### macos
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make debug`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;macos command: &nbsp;&nbsp;&nbsp;`make debug`
 
 
 ### release
 
 If you just want to run **imp**, then use this target.
 
-#### docker
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docker command: &nbsp;&nbsp;&nbsp;`make release-docker`
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make release-docker`
-
-#### macos
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make release`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;macos command: &nbsp;&nbsp;&nbsp;`make release`
 
 
 ### local
@@ -95,17 +87,9 @@ There are two modes of operation:
 
 This mode will have imp crawl the DHT of an eth2 testnet and output info to a csv
 
-#### docker
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;docker command: &nbsp;&nbsp;&nbsp;`make crawl-docker`
 
-```
-> make crawl-docker
-```
-
-#### macos
-
-```
-> cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory
-```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;macos command: &nbsp;&nbsp;&nbsp;`cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory`
 
 ### agent
 
