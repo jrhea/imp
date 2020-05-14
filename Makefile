@@ -18,12 +18,20 @@ debug:
 debug-local:
 	cargo build --features "local" --no-default-features 
 
+debug-docker: 
+	docker run --rm --user "$$(id -u)":"$$(id -g)" -v "$$PWD":/usr/src/imp -w /usr/src/imp -it rust:latest bash -c "cargo build"
+
 release:
 	cargo build --release
 
-docker: 
-	docker run --rm --user "$(id -u)":"$(id -g)" -v "$PWD":/usr/src/imp -w /usr/src/imp rust:latest make
+release-docker: 
+	docker run --rm --user "$$(id -u)":"$$(id -g)" -v "$$PWD":/usr/src/imp -w /usr/src/imp -it rust:latest bash -c "cargo build --release"
 
+crawl-docker:
+	docker run --rm --user "$$(id -u)":"$$(id -g)" -v "$$PWD":/usr/src/imp -w /usr/src/imp -it rust:latest bash -c "cd scripts && bash crawl-network.sh schlesi 10 snapshot"
+
+enr-count-docker:
+	docker run --rm --user "$$(id -u)":"$$(id -g)" -v "$$PWD":/usr/src/imp -w /usr/src/imp -it rust:latest bash -c "tail -n+2 .schlesi/crawler* | grep 9925efd6 | sed 's/\".*\"//g' |  cut -d',' -f3,12,14 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1 | cut -d',' -f3 |sed -e "s/^enr://" | wc -l"
 touch: 
 	cargo update -p https://github.com/prrkl/mothra#0.1.0
 	cargo update -p tree_hash

@@ -58,25 +58,34 @@ For convenience, a Makefile is provided to alias the different build options wit
 
 This build target is for developers and used (obviously) for debugging.
 
+#### docker
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make debug-docker`
+
+#### macos
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make debug`
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent to: &nbsp;&nbsp;&nbsp;`cargo build`
 
 ### release
 
 If you just want to run **imp**, then use this target.
 
+#### docker
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make release-docker`
+
+#### macos
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make release`
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent to: &nbsp;&nbsp;&nbsp;`cargo build --release`
 
 ### local
 
 This is an option for developers.  It is a convenient was to reference packages, like [mothra](https://github.com/prrkl/mothra), that are being developed along with **imp**.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make local`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;command: &nbsp;&nbsp;&nbsp;`make debug-local`
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equivalent to: &nbsp;&nbsp;&nbsp;`cargo build --features "local" --no-default-features`
 
 ## How to run
 
@@ -85,6 +94,14 @@ There are two modes of operation:
 ### crawler
 
 This mode will have imp crawl the DHT of an eth2 testnet and output info to a csv
+
+#### docker
+
+```
+> make crawl-docker
+```
+
+#### macos
 
 ```
 > cd scripts && sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory

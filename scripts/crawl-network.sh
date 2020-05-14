@@ -14,10 +14,16 @@ function post_process() {
     kill 0
 }
 
-
 NETWORK=$1
 NUM_CRAWLERS=$2
 OUTPUT_MODE=$3
+
+IP_ADDRESS=
+if [ "$(uname)" == "Darwin" ]; then
+    IP_ADDRESS=$(ipconfig getifaddr en0)      
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    IP_ADDRESS=$(hostname -i)
+fi
 
 FORK_DIGEST=
 BOOTSTRAP_BOOTNODES=
@@ -31,7 +37,16 @@ else
     echo network $NETWORK "not supported"
     exit 1
 fi
-DATA_DIR=~/.$NETWORK
+
+DATA_DIR=$HOME/.$NETWORK
+if [ $HOME = "/" ]; then
+    if [[ -z "${PWD//*\/scripts*/}" ]]; then
+        DATA_DIR=$PWD/../.$NETWORK
+    else
+        DATA_DIR=$PWD/.$NETWORK
+    fi
+fi
+
 mkdir -p $DATA_DIR
 FILE_BOOTNODES=
 BOOTNODES=
@@ -48,7 +63,7 @@ PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
     echo cat $DATA_DIR/crawler$PORT.csv
     #RUST_LOG=libp2p_discv5=debug
-    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $(ipconfig getifaddr en0) --port $PORT --boot-nodes $BOOTNODES &
+    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --boot-nodes $BOOTNODES &
     let PORT++;
 done
 

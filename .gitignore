@@ -15,3 +15,5 @@ Cargo.lock
 scripts/*.txt
 *.log
 scripts/output
+.schlesi/
+.topaz/
