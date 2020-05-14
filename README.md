@@ -8,11 +8,24 @@ Here's a screencap of two imp agents peered and communicating with a [Lighthouse
 
 ![imp](https://github.com/prrkl/docs/blob/master/resources/imphouse.gif)
 
+## QuickStart
+
+If you have [docker](https://docs.docker.com/get-docker) installed and you have already cloned the repo, then running **imp** in crawl mode is easy:
+
+1) `make release-docker`
+2) `make crawl-docker`
+
+the output will be stored in csv files in the current dir under .schlesi
+
 ## Docs
 
 For more information on prkl click [here](https://github.com/prrkl/docs/blob/master/README.md)
 
-## Prereqs ( MacOS )
+## Prereqs
+
+If you just want to build and run then [docker](https://docs.docker.com/get-docker) is the easiest way. See the QuickStart section above.
+
+### MacOS
 
 Rust:
 
