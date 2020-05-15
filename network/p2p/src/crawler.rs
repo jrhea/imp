@@ -4,6 +4,7 @@ use serde_derive::{Serialize};
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
+use eth2::ssz::{Decode, Encode};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
 use libp2p::core::{
@@ -110,10 +111,10 @@ impl Crawler {
 
         let config = Discv5ConfigBuilder::new()
             .request_timeout(Duration::from_secs(4))
-            .request_retries(2) //default 1
+            .request_retries(1) //default 1
             .enr_update(true) // update IP based on PONG responses
             .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet   //default 10
-            .query_parallelism(5) //default 3
+            .query_parallelism(10) //default 3
             .query_peer_timeout(Duration::from_secs(2)) //default 2
             .query_timeout(Duration::from_secs(60)) //default 60
             .session_timeout(Duration::from_secs(86400)) //default 86400
@@ -178,6 +179,7 @@ impl Crawler {
             Some(x) => format!("crawler{}.csv", x),
             _ => format!("crawler.csv")
         };
+        let mut target_enr = "".to_string();
         let target_random_node_id = enr::NodeId::random();
         self.swarm.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
@@ -245,10 +247,14 @@ impl Crawler {
                         let node_id = hex::encode(enr.node_id().clone().raw());
                         let peer_id = enr.peer_id().clone().to_string();
                         let seq_no = enr.seq().clone().to_string();
-                        let fork_digest = match get_fork_id_from_enr(enr) {
+                        let fork_id = get_fork_id_from_enr(enr);
+                        let fork_digest = match fork_id {
                             Some(x) => hex::encode(&x.fork_digest),
                             _ => "".to_string(),
                         };
+                        if target_enr == "".to_string() && fork_digest == "f071c66c".to_string() {
+                            target_enr = enr.to_base64();
+                        }
                         let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
                         let record = peers.entry(node_id.clone()).or_default();
                         *record = Record {
@@ -271,8 +277,29 @@ impl Crawler {
                         let _ = wtr.flush();
                         index += 1;
                     }
-                    // execute a FINDNODE query
-                    self.swarm.find_node(target_random_node_id);
+                    if target_enr != "".to_string() {
+                        let fork_id = get_fork_id_from_enr(&target_enr.parse::<enr::Enr<enr::CombinedKey>>().unwrap());
+                        match fork_id {
+                            Some(x) => {
+                                let fork_digest = hex::encode(&x.fork_digest);
+                                match fork_digest.as_str() {
+                                    "f071c66c" => {
+                                        let enr_fork_id = x.as_ssz_bytes();
+                                        // predicate for finding nodes with a matching fork
+                                        let eth2_fork_predicate = move |enr: &enr::Enr<enr::CombinedKey>| enr.get("eth2") == Some(&enr_fork_id.clone());
+                                        let predicate = move |enr: &enr::Enr<enr::CombinedKey>| eth2_fork_predicate(enr);
+                                        self.swarm
+                                            .find_enr_predicate(target_random_node_id, predicate, 32);
+                                    },
+                                    _ => self.swarm.find_node(target_random_node_id)
+                                };
+                            },
+                            _ => ()
+                        };
+
+                    } else {
+                        self.swarm.find_node(target_random_node_id);
+                    }
                 }
 
                 match self.swarm.poll().expect("Error while polling swarm") {
