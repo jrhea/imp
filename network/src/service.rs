@@ -43,16 +43,13 @@ impl Service {
                     log.new(o!("NetworkService" => "P2PAdapter")),
                 )),
                 None,
-                None
+                None,
             ),
             "crawler" => {
-                let (crawler, tx) = Crawler::new(arg_matches, log.new(o!("Network Service" => "Discovery")));
-                (
-                    None,
-                    Some(crawler),
-                    Some(tx)
-                )
-            },
+                let (crawler, tx) =
+                    Crawler::new(arg_matches, log.new(o!("Network Service" => "Discovery")));
+                (None, Some(crawler), Some(tx))
+            }
             _ => (None, None, None),
         };
 
@@ -74,10 +71,9 @@ impl Service {
         task::spawn(async move {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
-                    crawler.find_nodes(
-                        crawler_log.new(o!("Network Service" => "Crawler")),
-                    )
-                    .await;
+                    crawler
+                        .find_nodes(crawler_log.new(o!("Network Service" => "Crawler")))
+                        .await;
                 });
             }
 
