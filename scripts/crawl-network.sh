@@ -63,7 +63,7 @@ PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
     echo cat $DATA_DIR/crawler$PORT.csv
     #RUST_LOG=libp2p_discv5=debug
-    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --boot-nodes $BOOTNODES &
+    ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level debug crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --fork-digest $FORK_DIGEST --boot-nodes $BOOTNODES &
     let PORT++;
 done
 

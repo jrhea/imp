@@ -48,6 +48,7 @@ pub struct Crawler {
     swarm: Swarm,
     shutdown_rx: tokio_01::sync::oneshot::Receiver<()>,
     output_mode: String,
+    fork_digest: String,
     datadir: PathBuf,
 }
 
@@ -81,6 +82,10 @@ impl Crawler {
             .expect("required parameter")
             .parse::<u16>()
             .expect("Invalid listening port");
+
+        let fork_digest = crawler_arg_matches
+            .value_of("fork-digest")
+            .expect("required parameter");
 
         let boot_enr_list = if crawler_arg_matches.is_present("boot-nodes") {
             crawler_arg_matches
@@ -154,6 +159,7 @@ impl Crawler {
                 swarm, 
                 shutdown_rx: rx, 
                 output_mode: output_mode.to_string(),
+                fork_digest: fork_digest.to_string(),
                 datadir
             },
             tx
@@ -252,7 +258,7 @@ impl Crawler {
                             Some(x) => hex::encode(&x.fork_digest),
                             _ => "".to_string(),
                         };
-                        if target_enr == "".to_string() && fork_digest == "f071c66c".to_string() {
+                        if target_enr == "".to_string() && ( fork_digest == self.fork_digest || self.fork_digest.is_empty() ) {
                             target_enr = enr.to_base64();
                         }
                         let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
@@ -281,18 +287,16 @@ impl Crawler {
                         let fork_id = get_fork_id_from_enr(&target_enr.parse::<enr::Enr<enr::CombinedKey>>().unwrap());
                         match fork_id {
                             Some(x) => {
-                                let fork_digest = hex::encode(&x.fork_digest);
-                                match fork_digest.as_str() {
-                                    "f071c66c" => {
+                                if self.fork_digest.is_empty() || self.fork_digest == hex::encode(&x.fork_digest){
                                         let enr_fork_id = x.as_ssz_bytes();
                                         // predicate for finding nodes with a matching fork
                                         let eth2_fork_predicate = move |enr: &enr::Enr<enr::CombinedKey>| enr.get("eth2") == Some(&enr_fork_id.clone());
                                         let predicate = move |enr: &enr::Enr<enr::CombinedKey>| eth2_fork_predicate(enr);
                                         self.swarm
-                                            .find_enr_predicate(target_random_node_id, predicate, 32);
-                                    },
-                                    _ => self.swarm.find_node(target_random_node_id)
-                                };
+                                            .find_enr_predicate(target_random_node_id, predicate, 32)
+                                } else {
+                                    self.swarm.find_node(target_random_node_id)
+                                }
                             },
                             _ => ()
                         };
@@ -350,6 +354,16 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
             .value_name("PORT")
             .help("The TCP/UDP port to listen on.")
             .default_value("9000")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("fork-digest")
+            .long("fork-digest")
+            .allow_hyphen_values(true)
+            .value_name("FORK-DIGEST")
+            .help("Fork digest of the network to crawl.")
+            .possible_values(&["9925efd6","f071c66c",""])
+            .default_value("")
             .takes_value(true),
     )
     .arg(
