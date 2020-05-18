@@ -3,8 +3,8 @@ use csv;
 use serde_derive::{Serialize};
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
-use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
 use eth2::ssz::{Decode, Encode};
+use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
 use futures_01::prelude::*;
 use futures_01::stream::Stream;
 use libp2p::core::{
@@ -25,7 +25,6 @@ pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
 pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
 pub type Swarm = libp2p::Swarm<Libp2pStream, Discv5Stream>;
 
-
 #[derive(Serialize, Default)]
 struct Record {
     index: u32,
@@ -41,7 +40,7 @@ struct Record {
     fork_digest: String,
     seq_no: String,
     subnet_ids: String,
-    enr: String
+    enr: String,
 }
 
 pub struct Crawler {
@@ -53,7 +52,10 @@ pub struct Crawler {
 }
 
 impl Crawler {
-    pub fn new(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> (Self, tokio_01::sync::oneshot::Sender<()>){
+    pub fn new(
+        arg_matches: &ArgMatches<'_>,
+        log: slog::Logger,
+    ) -> (Self, tokio_01::sync::oneshot::Sender<()>) {
         // get mothra subcommand args matches
         let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -133,18 +135,17 @@ impl Crawler {
 
         // construct the discv5 swarm, initializing an unused transport layer
         let discv5 = Discv5::new(local_enr, keypair.clone(), config, socket_addr).unwrap();
-        let mut swarm: Swarm = libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
+        let mut swarm: Swarm =
+            libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
 
-        info!(log,"Found {} bootstrap enrs", boot_enr_list.len());
+        info!(log, "Found {} bootstrap enrs", boot_enr_list.len());
         // if we know of another peer's ENR, add it known peers
         for enr_str in boot_enr_list {
-            let _ = match enr_str
-                .parse::<enr::Enr<enr::CombinedKey>>()
-            {
+            let _ = match enr_str.parse::<enr::Enr<enr::CombinedKey>>() {
                 Ok(enr) => {
                     trace!(log, "Added {} to list of bootstrap enrs", enr_str);
                     swarm.add_enr(enr)
-                },
+                }
                 Err(_) => {
                     trace!(log, "Failed to add {} to list of bootstrap enrs", enr_str);
                     Ok(())
@@ -154,23 +155,19 @@ impl Crawler {
 
         let (tx, rx) = tokio_01::sync::oneshot::channel::<()>();
 
-        ( 
+        (
             Crawler {
-                swarm, 
-                shutdown_rx: rx, 
+                swarm,
+                shutdown_rx: rx,
                 output_mode: output_mode.to_string(),
                 fork_digest: fork_digest.to_string(),
-                datadir
+                datadir,
             },
-            tx
+            tx,
         )
-        
     }
 
-    pub async fn find_nodes(
-        mut self,
-        log: slog::Logger,
-    ) {
+    pub async fn find_nodes(mut self, log: slog::Logger) {
         if let Some(enr) = self.swarm.enr_entries().next() {
             info!(
                 log,
@@ -183,7 +180,7 @@ impl Crawler {
 
         let output_file = match self.swarm.local_enr().udp() {
             Some(x) => format!("crawler{}.csv", x),
-            _ => format!("crawler.csv")
+            _ => format!("crawler.csv"),
         };
         let mut target_enr = "".to_string();
         let target_random_node_id = enr::NodeId::random();
@@ -200,23 +197,19 @@ impl Crawler {
                 }
                 while let Ok(Async::Ready(_)) = query_interval.poll() {
                     let file = match self.output_mode.as_str() {
-                        "timehistory" => {
-                            OpenOptions::new()
-                                .write(true)
-                                .create(true)
-                                .append(true)
-                                .open(self.datadir.join(&output_file))
-                                .unwrap()
-                        },
-                        _ =>  {
-                            OpenOptions::new()
-                                .truncate(true)
-                                .write(true)
-                                .create(true)
-                                .append(false)
-                                .open(self.datadir.join(&output_file))
-                                .unwrap()
-                        }
+                        "timehistory" => OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .append(true)
+                            .open(self.datadir.join(&output_file))
+                            .unwrap(),
+                        _ => OpenOptions::new()
+                            .truncate(true)
+                            .write(true)
+                            .create(true)
+                            .append(false)
+                            .open(self.datadir.join(&output_file))
+                            .unwrap(),
                     };
                     let mut wtr = csv::Writer::from_writer(file);
                     let mut index = 1;
@@ -258,7 +251,9 @@ impl Crawler {
                             Some(x) => hex::encode(&x.fork_digest),
                             _ => "".to_string(),
                         };
-                        if target_enr == "".to_string() && ( fork_digest == self.fork_digest || self.fork_digest.is_empty() ) {
+                        if target_enr == "".to_string()
+                            && (fork_digest == self.fork_digest || self.fork_digest.is_empty())
+                        {
                             target_enr = enr.to_base64();
                         }
                         let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
@@ -277,30 +272,41 @@ impl Crawler {
                             fork_digest: fork_digest.clone(),
                             seq_no: seq_no.clone(),
                             subnet_ids: subnet_ids.clone(),
-                            enr: enr.to_base64()
+                            enr: enr.to_base64(),
                         };
                         let _ = wtr.serialize(record);
                         let _ = wtr.flush();
                         index += 1;
                     }
                     if target_enr != "".to_string() {
-                        let fork_id = get_fork_id_from_enr(&target_enr.parse::<enr::Enr<enr::CombinedKey>>().unwrap());
+                        let fork_id = get_fork_id_from_enr(
+                            &target_enr.parse::<enr::Enr<enr::CombinedKey>>().unwrap(),
+                        );
                         match fork_id {
                             Some(x) => {
-                                if self.fork_digest.is_empty() || self.fork_digest == hex::encode(&x.fork_digest){
-                                        let enr_fork_id = x.as_ssz_bytes();
-                                        // predicate for finding nodes with a matching fork
-                                        let eth2_fork_predicate = move |enr: &enr::Enr<enr::CombinedKey>| enr.get("eth2") == Some(&enr_fork_id.clone());
-                                        let predicate = move |enr: &enr::Enr<enr::CombinedKey>| eth2_fork_predicate(enr);
-                                        self.swarm
-                                            .find_enr_predicate(target_random_node_id, predicate, 32)
+                                if self.fork_digest.is_empty()
+                                    || self.fork_digest == hex::encode(&x.fork_digest)
+                                {
+                                    let enr_fork_id = x.as_ssz_bytes();
+                                    // predicate for finding nodes with a matching fork
+                                    let eth2_fork_predicate =
+                                        move |enr: &enr::Enr<enr::CombinedKey>| {
+                                            enr.get("eth2") == Some(&enr_fork_id.clone())
+                                        };
+                                    let predicate = move |enr: &enr::Enr<enr::CombinedKey>| {
+                                        eth2_fork_predicate(enr)
+                                    };
+                                    self.swarm.find_enr_predicate(
+                                        target_random_node_id,
+                                        predicate,
+                                        32,
+                                    )
                                 } else {
                                     self.swarm.find_node(target_random_node_id)
                                 }
-                            },
-                            _ => ()
+                            }
+                            _ => (),
                         };
-
                     } else {
                         self.swarm.find_node(target_random_node_id);
                     }
@@ -316,7 +322,6 @@ impl Crawler {
             Ok(Async::NotReady)
         }));
     }
-
 }
 
 pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
