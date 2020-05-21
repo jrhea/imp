@@ -38,16 +38,20 @@ else
     exit 1
 fi
 
+TIMESTAMP=$(date +%s)
 DATA_DIR=$HOME/.$NETWORK
+BACKUP_DIR=$HOME/.imp/$TIMESTAMP
 if [ $HOME = "/" ]; then
     if [[ -z "${PWD//*\/scripts*/}" ]]; then
         DATA_DIR=$PWD/../.$NETWORK
+        BACKUP_DIR=$PWD/../.imp/$TIMESTAMP
     else
         DATA_DIR=$PWD/.$NETWORK
+        BACKUP_DIR=$PWD/.imp/$TIMESTAMP
     fi
 fi
+mkdir -p $BACKUP_DIR
 
-mkdir -p $DATA_DIR
 FILE_BOOTNODES=
 BOOTNODES=
 if [ -f $DATA_DIR/enrs.txt ]; then 
@@ -58,6 +62,7 @@ else
     BOOTNODES=$BOOTSTRAP_BOOTNODES
 fi
 
+cp -r $DATA_DIR $BACKUP_DIR/
 rm -f $DATA_DIR/crawler*
 PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
