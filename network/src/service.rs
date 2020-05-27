@@ -12,7 +12,6 @@ pub struct Service {
     run_mode: String,
     p2p_adapter: Option<P2PAdapter>,
     crawler: Option<Crawler>,
-    shutdown_tx: Option<tokio_01::sync::oneshot::Sender<()>>,
     log: slog::Logger,
 }
 
@@ -31,7 +30,7 @@ impl Service {
             run_mode = "crawler";
         }
 
-        let (p2p_adapter, crawler, shutdown_tx) = match run_mode {
+        let (p2p_adapter, crawler) = match run_mode {
             "node" => (
                 Some(P2PAdapter::new(
                     &executor,
@@ -43,21 +42,19 @@ impl Service {
                     log.new(o!("NetworkService" => "P2PAdapter")),
                 )),
                 None,
-                None,
             ),
             "crawler" => {
-                let (crawler, tx) =
-                    Crawler::new(arg_matches, log.new(o!("Network Service" => "Discovery")));
-                (None, Some(crawler), Some(tx))
+                let crawler =
+                    Crawler::new(arg_matches, log.new(o!("Network Service" => "Crawler")));
+                (None, Some(crawler))
             }
-            _ => (None, None, None),
+            _ => (None, None),
         };
 
         Service {
             run_mode: run_mode.into(),
             p2p_adapter,
             crawler,
-            shutdown_tx,
             log,
         }
     }
@@ -65,14 +62,14 @@ impl Service {
         let run_mode = self.run_mode;
         let p2p_adapter = self.p2p_adapter;
         let crawler = self.crawler.unwrap();
-        let crawler_shutdown_tx = self.shutdown_tx;
         let crawler_log = self.log.clone();
         let service_log = self.log.clone();
+        let crawler_shutdown_rx = shutdown_rx.clone();
         task::spawn(async move {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
                     crawler
-                        .find_nodes(crawler_log.new(o!("Network Service" => "Crawler")))
+                        .find_nodes(crawler_shutdown_rx, crawler_log.new(o!("Network Service" => "Crawler")))
                         .await;
                 });
             }
@@ -92,12 +89,6 @@ impl Service {
                 "node" => {
                     let _ = match p2p_adapter {
                         Some(p2p_adapter) => p2p_adapter.close(),
-                        None => Err(()),
-                    };
-                }
-                "crawler" => {
-                    let _ = match crawler_shutdown_tx {
-                        Some(crawler_shutdown_tx) => crawler_shutdown_tx.send(()),
                         None => Err(()),
                     };
                 }

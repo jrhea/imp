@@ -5,13 +5,10 @@ use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use eth2::ssz::{Decode, Encode};
 use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
-use futures_01::prelude::*;
-use futures_01::stream::Stream;
-use libp2p::core::{
-    muxing::StreamMuxerBox, nodes::Substream, transport::dummy::DummyTransport, PeerId,
-};
-use libp2p::discv5::{enr, Discv5, Discv5Config, Discv5ConfigBuilder};
-use libp2p::identity;
+use futures::prelude::*;
+use futures::future::Future;
+use tokio_02::sync::watch;
+use discv5::{enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId}, Discv5, Discv5Event, Discv5Config, Discv5ConfigBuilder};
 use slog::{debug, info, o, trace, warn};
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -20,17 +17,14 @@ use std::io;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::Duration;
-
-pub type Libp2pStream = DummyTransport<(PeerId, StreamMuxerBox)>;
-pub type Discv5Stream = Discv5<Substream<StreamMuxerBox>>;
-pub type Swarm = libp2p::Swarm<Libp2pStream, Discv5Stream>;
+use types::events::Events;
+use std::any::type_name;
 
 #[derive(Serialize, Default)]
 struct Record {
     index: u32,
     timestamp: String,
     node_id: String,
-    peer_id: String,
     ip4: String,
     tcp4: String,
     udp4: String,
@@ -44,8 +38,11 @@ struct Record {
 }
 
 pub struct Crawler {
-    swarm: Swarm,
-    shutdown_rx: tokio_01::sync::oneshot::Receiver<()>,
+    local_enr: Enr<CombinedKey>,
+    enr_key: CombinedKey,
+    socket_addr: SocketAddr,
+    boot_enr_list: Vec<String>,
+    config: Discv5Config,
     output_mode: String,
     fork_digest: String,
     datadir: PathBuf,
@@ -55,7 +52,7 @@ impl Crawler {
     pub fn new(
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
-    ) -> (Self, tokio_01::sync::oneshot::Sender<()>) {
+    ) -> Self {
         // get mothra subcommand args matches
         let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -100,21 +97,19 @@ impl Crawler {
         } else {
             Default::default()
         };
+        info!(log, "Found {} bootstrap enrs", boot_enr_list.len());
+
         // build the local ENR
-        let keypair = identity::Keypair::generate_secp256k1();
-        let enr_key = keypair.clone().try_into().unwrap();
+        let enr_key = CombinedKey::generate_secp256k1();
         let local_enr = {
-            enr::EnrBuilder::new("v4")
+            EnrBuilder::new("v4")
                 .ip(listen_address)
                 .udp(listen_port)
                 .build(&enr_key)
                 .unwrap()
         };
         info!(log, "Local Node Id: {}", local_enr.node_id());
-        info!(log, "Local Peer Id: {}", local_enr.peer_id());
-
-        // unused transport for building a swarm
-        let transport: Libp2pStream = libp2p::core::transport::dummy::DummyTransport::new();
+        //info!(log, "Local Peer Id: {}", local_enr.peer_id());
 
         let config = Discv5ConfigBuilder::new()
             .request_timeout(Duration::from_secs(4))
@@ -133,18 +128,28 @@ impl Crawler {
         // the address to listen on
         let socket_addr = SocketAddr::new(listen_address, listen_port);
 
-        // construct the discv5 swarm, initializing an unused transport layer
-        let discv5 = Discv5::new(local_enr, keypair.clone(), config, socket_addr).unwrap();
-        let mut swarm: Swarm =
-            libp2p::Swarm::new(transport, discv5, keypair.public().into_peer_id());
+        Crawler {
+            local_enr,
+            enr_key,
+            socket_addr,
+            boot_enr_list,
+            config,
+            output_mode: output_mode.to_string(),
+            fork_digest: fork_digest.to_string(),
+            datadir,
+        }
+    }
 
-        info!(log, "Found {} bootstrap enrs", boot_enr_list.len());
+    pub async fn find_nodes(mut self, mut shutdown_rx: watch::Receiver<Events>, log: slog::Logger) {
+
+        // construct the discv5 swarm, initializing an unused transport layer
+        let mut discv5 = Discv5::new(self.local_enr, self.enr_key, self.config, self.socket_addr).unwrap();
         // if we know of another peer's ENR, add it known peers
-        for enr_str in boot_enr_list {
-            let _ = match enr_str.parse::<enr::Enr<enr::CombinedKey>>() {
+        for enr_str in self.boot_enr_list {
+            let _ = match enr_str.parse::<Enr<CombinedKey>>() {
                 Ok(enr) => {
                     trace!(log, "Added {} to list of bootstrap enrs", enr_str);
-                    swarm.add_enr(enr)
+                    discv5.add_enr(enr)
                 }
                 Err(_) => {
                     trace!(log, "Failed to add {} to list of bootstrap enrs", enr_str);
@@ -152,23 +157,7 @@ impl Crawler {
                 }
             };
         }
-
-        let (tx, rx) = tokio_01::sync::oneshot::channel::<()>();
-
-        (
-            Crawler {
-                swarm,
-                shutdown_rx: rx,
-                output_mode: output_mode.to_string(),
-                fork_digest: fork_digest.to_string(),
-                datadir,
-            },
-            tx,
-        )
-    }
-
-    pub async fn find_nodes(mut self, log: slog::Logger) {
-        if let Some(enr) = self.swarm.enr_entries().next() {
+        if let Some(enr) = discv5.enr_entries().next() {
             info!(
                 log,
                 "Bootstrap ENR. ip: {:?}, udp_port {:?}, tcp_port: {:?}",
@@ -178,20 +167,53 @@ impl Crawler {
             );
         }
 
-        let output_file = match self.swarm.local_enr().udp() {
+        let output_file = match discv5.local_enr().udp() {
             Some(x) => format!("crawler{}.csv", x),
             _ => format!("crawler.csv"),
         };
         let mut target_enr = "".to_string();
-        let target_random_node_id = enr::NodeId::random();
-        self.swarm.find_node(target_random_node_id);
+        let target_random_node_id = NodeId::random();
+        discv5.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
-        let mut query_interval = tokio_01::timer::Interval::new_interval(Duration::from_secs(5));
+        let mut query_interval = tokio_02::time::interval(Duration::from_secs(5));
         let mut peers: HashMap<String, Record> = Default::default();
 
-        tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
+        loop {
+            // if let Some(Events::ShutdownMessage) = shutdown_rx.recv().await {
+            //     warn!(
+            //         log,
+            //         "{:?}: shutdown message received.",
+            //         type_name::<Crawler>()
+            //     );
+            //     break;
+            // }
+            tokio_02::select! {
+                _ = query_interval.next() => {
+                    // pick a random node target
+                    let target_random_node_id = NodeId::random();
+                    info!(log, "Connected Peers: {}", discv5.connected_peers());
+                    info!(log, "Searching for peers...");
+                    // execute a FINDNODE query
+                    discv5.find_node(target_random_node_id);
+                }
+                Some(event) = discv5.next() => {
+                        if let Discv5Event::FindNodeResult { closer_peers, .. } = event {
+                            if !closer_peers.is_empty() {
+                                info!(log, "Query Completed. Nodes found:");
+                                for n in closer_peers {
+                                    info!(log, "Node: {}", n);
+                                }
+                            } else {
+                                info!(log, "Query Completed. No peers found.")
+                            }
+                        }
+                    }
+            }
+        }
+
+/*        tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
             loop {
-                if let Ok(Async::Ready(_)) | Err(_) = self.shutdown_rx.poll() {
+                if let Ok(Async::Ready(_)) | Err(_) = shutdown_rx.poll() {
                     warn!(log, "crawler: shutdown message received.");
                     return Ok(Async::Ready(()));
                 }
@@ -215,10 +237,10 @@ impl Crawler {
                     let mut index = 1;
                     let timestamp = format!("{}", Local::now().format("%Y-%m-%d][%H:%M:%S"));
                     // pick a random node target
-                    let target_random_node_id = enr::NodeId::random();
+                    let target_random_node_id = NodeId::random();
                     //println!("Connected Peers: {}", swarm.connected_peers());
 
-                    for enr in self.swarm.enr_entries() {
+                    for enr in self.discv5.enr_entries() {
                         let ip4: String = match enr.ip() {
                             Some(x) => x.to_string(),
                             _ => "".to_string(),
@@ -244,8 +266,7 @@ impl Crawler {
                             _ => "".to_string(),
                         };
                         let node_id = hex::encode(enr.node_id().clone().raw());
-                        let peer_id = enr.peer_id().clone().to_string();
-                        let seq_no = enr.seq().clone().to_string();
+                         let seq_no = enr.seq().clone().to_string();
                         let fork_id = get_fork_id_from_enr(enr);
                         let fork_digest = match fork_id {
                             Some(x) => hex::encode(&x.fork_digest),
@@ -262,7 +283,6 @@ impl Crawler {
                             index,
                             timestamp: timestamp.clone(),
                             node_id: node_id.clone(),
-                            peer_id: peer_id.clone(),
                             ip4: ip4.clone(),
                             tcp4: tcp4.clone(),
                             udp4: udp4.clone(),
@@ -280,7 +300,7 @@ impl Crawler {
                     }
                     if target_enr != "".to_string() {
                         let fork_id = get_fork_id_from_enr(
-                            &target_enr.parse::<enr::Enr<enr::CombinedKey>>().unwrap(),
+                            &target_enr.parse::<Enr<CombinedKey>>().unwrap(),
                         );
                         match fork_id {
                             Some(x) => {
@@ -290,29 +310,29 @@ impl Crawler {
                                     let enr_fork_id = x.as_ssz_bytes();
                                     // predicate for finding nodes with a matching fork
                                     let eth2_fork_predicate =
-                                        move |enr: &enr::Enr<enr::CombinedKey>| {
+                                        move |enr: &Enr<CombinedKey>| {
                                             enr.get("eth2") == Some(&enr_fork_id.clone())
                                         };
-                                    let predicate = move |enr: &enr::Enr<enr::CombinedKey>| {
+                                    let predicate = move |enr: &Enr<CombinedKey>| {
                                         eth2_fork_predicate(enr)
                                     };
-                                    self.swarm.find_enr_predicate(
+                                    self.discv5.find_enr_predicate(
                                         target_random_node_id,
                                         predicate,
                                         32,
                                     )
                                 } else {
-                                    self.swarm.find_node(target_random_node_id)
+                                    self.discv5.find_node(target_random_node_id)
                                 }
                             }
                             _ => (),
                         };
                     } else {
-                        self.swarm.find_node(target_random_node_id);
+                        self.discv5.find_node(target_random_node_id);
                     }
                 }
 
-                match self.swarm.poll().expect("Error while polling swarm") {
+                match self.discv5.poll().expect("Error while polling swarm") {
                     Async::Ready(Some(event)) => match event {
                         _ => (),
                     },
@@ -320,7 +340,7 @@ impl Crawler {
                 }
             }
             Ok(Async::NotReady)
-        }));
+        }));*/
     }
 }
 

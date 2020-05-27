@@ -10,7 +10,8 @@ local = ["eth2_libp2p_local", "eth2_types_local","eth2_config_local","eth2_testn
 
 [dependencies]
 dirs = "2.0.2"
-eth2_libp2p = { version = "0.2.0", package = "eth2-libp2p", optional = true }
+discv5 = "0.1.0-alpha.3"
+eth2_libp2p = { version = "0.1.2", package = "eth2-libp2p", optional = true }
 eth2_libp2p_local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
 eth2_types =  { version = "0.2.0",  package = "types", optional = true }
 eth2_types_local =  { path = "../../lighthouse/eth2/types", package = "types", optional = true }
