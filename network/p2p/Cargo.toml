@@ -9,7 +9,8 @@ default = ["mothra"]
 local = ["mothra_local"]
 
 [dependencies]
-libp2p = "0.13.2"
+libp2p = { version = "0.19.1", default-features = false, features = ["tokio"], package = "libp2p-tcp" }
+discv5 = "0.1.0-alpha.3"
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
@@ -18,12 +19,12 @@ mothra_local = { path = "../../../mothra/core", package = "mothra", optional = t
 
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
 tokio-01 = { version = "0.1.22", package = "tokio"}
-tokio-02 = { version = "0.2", features = ["full"], package = "tokio" }
+tokio-02 = { version = "0.2.21", features = ["full"], package = "tokio" }
 slog = { version = "2.5.2" , features = ["max_level_trace"] }
 target_info = "0.1.0"
 clap = "2.33.0"
 futures-01 = { version = "0.1.29", package = "futures" }
-futures = "0.3"
+futures = "0.3.5"
 hex = "0.3"
 csv = "1.1.3"
 serde_derive = "1.0.106"

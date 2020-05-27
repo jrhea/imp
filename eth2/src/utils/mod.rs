@@ -1,8 +1,8 @@
 use crate::config::Eth2Config;
-use crate::libp2p::types::EnrBitfield;
-use crate::libp2p::types::{GossipEncoding, GossipKind, GossipTopic};
-use crate::libp2p::Enr;
-use crate::libp2p::Eth2Enr;
+use crate::libp2p::types::{GossipEncoding, GossipKind, GossipTopic, EnrBitfield};
+use crate::libp2p::discovery::enr_ext::{CombinedKeyExt, EnrExt};
+use discv5::enr::{Enr,CombinedKey};
+//pub use enr_ext::{CombinedKeyExt, EnrExt};
 use crate::libp2p::NetworkConfig;
 use crate::ssz::types::BitVector;
 use crate::ssz::{Decode, Encode};
@@ -46,7 +46,7 @@ pub fn get_fork_id_from_dir(dir: Option<PathBuf>) -> Option<EnrForkId> {
     }
 }
 
-pub fn get_fork_id_from_enr(enr: &Enr) -> Option<EnrForkId> {
+pub fn get_fork_id_from_enr(enr: &Enr<CombinedKey>) -> Option<EnrForkId> {
     match enr.get("eth2") {
         Some(enr_fork_id) => match EnrForkId::from_ssz_bytes(enr_fork_id) {
             Ok(enr_fork_id) => Some(enr_fork_id),
@@ -56,9 +56,10 @@ pub fn get_fork_id_from_enr(enr: &Enr) -> Option<EnrForkId> {
     }
 }
 
-pub fn get_attnets_from_enr(enr: &Enr) -> Vec<u64> {
+pub fn get_attnets_from_enr(enr: &Enr<CombinedKey>) -> Vec<u64> {
     let mut attnets = vec![];
-    if let Ok(bitfield) = enr.bitfield::<MainnetEthSpec>() {
+
+    if let Ok(bitfield) = get_bitfield_from_enr(enr) {
         if bitfield.len() > 0 {
             let subnet_count = get_chain_spec().attestation_subnet_count as usize;
             for i in 0..=subnet_count {
@@ -72,22 +73,24 @@ pub fn get_attnets_from_enr(enr: &Enr) -> Vec<u64> {
     return attnets;
 }
 
-pub fn get_bitfield_from_enr(enr: &Enr) -> Vec<u8> {
-    match enr.get("attnets") {
-        Some(bitfield) => bitfield.clone(),
-        _ => vec![],
-    }
+pub fn get_bitfield_from_enr(enr: &Enr<CombinedKey>) -> Result<EnrBitfield<MainnetEthSpec>, &'static str> {
+    let bitfield_bytes = enr
+        .get("attnets")
+        .ok_or_else(|| "ENR bitfield non-existent")?;
+
+    BitVector::<<MainnetEthSpec as EthSpec>::SubnetBitfieldLength>::from_ssz_bytes(bitfield_bytes)
+        .map_err(|_| "Could not decode the ENR SSZ bitfield")
 }
 
-pub fn get_enr_from_string(enr: String) -> Option<Enr> {
-    match enr.parse::<Enr>() {
+pub fn get_enr_from_string(enr: String) -> Option<Enr<CombinedKey>> {
+    match enr.parse::<Enr<CombinedKey>>() {
         Ok(enr) => Some(enr),
         Err(_e) => None,
     }
 }
 
 pub fn get_fork_id_from_string(enr: String) -> Option<EnrForkId> {
-    match enr.parse::<Enr>() {
+    match enr.parse::<Enr<CombinedKey>>() {
         Ok(enr) => get_fork_id_from_enr(&enr),
         Err(_e) => None,
     }
