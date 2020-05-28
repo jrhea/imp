@@ -69,7 +69,10 @@ impl Service {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
                     crawler
-                        .find_nodes(crawler_shutdown_rx, crawler_log.new(o!("Network Service" => "Crawler")))
+                        .find_nodes(
+                            crawler_shutdown_rx,
+                            crawler_log.new(o!("Network Service" => "Crawler")),
+                        )
                         .await;
                 });
             }

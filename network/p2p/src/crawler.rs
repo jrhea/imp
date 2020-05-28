@@ -3,13 +3,16 @@ use csv;
 use serde_derive::{Serialize};
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
+use discv5::{
+    enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
+    Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
+};
 use eth2::ssz::{Decode, Encode};
 use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
-use futures::prelude::*;
 use futures::future::Future;
-use tokio_02::sync::watch;
-use discv5::{enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId}, Discv5, Discv5Event, Discv5Config, Discv5ConfigBuilder};
+use futures::prelude::*;
 use slog::{debug, info, o, trace, warn};
+use std::any::type_name;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fs::OpenOptions;
@@ -17,14 +20,15 @@ use std::io;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::Duration;
+use tokio_02::sync::watch;
 use types::events::Events;
-use std::any::type_name;
 
 #[derive(Serialize, Default)]
 struct Record {
     index: u32,
     timestamp: String,
     node_id: String,
+    peer_id: String,
     ip4: String,
     tcp4: String,
     udp4: String,
@@ -49,10 +53,7 @@ pub struct Crawler {
 }
 
 impl Crawler {
-    pub fn new(
-        arg_matches: &ArgMatches<'_>,
-        log: slog::Logger,
-    ) -> Self {
+    pub fn new(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Self {
         // get mothra subcommand args matches
         let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -141,9 +142,9 @@ impl Crawler {
     }
 
     pub async fn find_nodes(mut self, mut shutdown_rx: watch::Receiver<Events>, log: slog::Logger) {
-
         // construct the discv5 swarm, initializing an unused transport layer
-        let mut discv5 = Discv5::new(self.local_enr, self.enr_key, self.config, self.socket_addr).unwrap();
+        let mut discv5 =
+            Discv5::new(self.local_enr, self.enr_key, self.config, self.socket_addr).unwrap();
         // if we know of another peer's ENR, add it known peers
         for enr_str in self.boot_enr_list {
             let _ = match enr_str.parse::<Enr<CombinedKey>>() {
@@ -179,45 +180,18 @@ impl Crawler {
         let mut peers: HashMap<String, Record> = Default::default();
 
         loop {
-            // if let Some(Events::ShutdownMessage) = shutdown_rx.recv().await {
-            //     warn!(
-            //         log,
-            //         "{:?}: shutdown message received.",
-            //         type_name::<Crawler>()
-            //     );
-            //     break;
-            // }
             tokio_02::select! {
-                _ = query_interval.next() => {
-                    // pick a random node target
-                    let target_random_node_id = NodeId::random();
-                    info!(log, "Connected Peers: {}", discv5.connected_peers());
-                    info!(log, "Searching for peers...");
-                    // execute a FINDNODE query
-                    discv5.find_node(target_random_node_id);
-                }
-                Some(event) = discv5.next() => {
-                        if let Discv5Event::FindNodeResult { closer_peers, .. } = event {
-                            if !closer_peers.is_empty() {
-                                info!(log, "Query Completed. Nodes found:");
-                                for n in closer_peers {
-                                    info!(log, "Node: {}", n);
-                                }
-                            } else {
-                                info!(log, "Query Completed. No peers found.")
-                            }
-                        }
+                x = shutdown_rx.recv() => {
+                    if let Some(Events::ShutdownMessage) = x {
+                        warn!(
+                            log,
+                            "{:?}: shutdown message received.",
+                            type_name::<Crawler>()
+                        );
+                        break;
                     }
-            }
-        }
-
-/*        tokio_01::run(futures_01::future::poll_fn(move || -> Result<_, ()> {
-            loop {
-                if let Ok(Async::Ready(_)) | Err(_) = shutdown_rx.poll() {
-                    warn!(log, "crawler: shutdown message received.");
-                    return Ok(Async::Ready(()));
-                }
-                while let Ok(Async::Ready(_)) = query_interval.poll() {
+                },
+                _ = query_interval.next() => {
                     let file = match self.output_mode.as_str() {
                         "timehistory" => OpenOptions::new()
                             .write(true)
@@ -238,9 +212,8 @@ impl Crawler {
                     let timestamp = format!("{}", Local::now().format("%Y-%m-%d][%H:%M:%S"));
                     // pick a random node target
                     let target_random_node_id = NodeId::random();
-                    //println!("Connected Peers: {}", swarm.connected_peers());
-
-                    for enr in self.discv5.enr_entries() {
+                    info!(log, "Connected Peers: {}", discv5.connected_peers());
+                    for enr in discv5.enr_entries() {
                         let ip4: String = match enr.ip() {
                             Some(x) => x.to_string(),
                             _ => "".to_string(),
@@ -266,7 +239,8 @@ impl Crawler {
                             _ => "".to_string(),
                         };
                         let node_id = hex::encode(enr.node_id().clone().raw());
-                         let seq_no = enr.seq().clone().to_string();
+                        let peer_id = "".to_string();
+                        let seq_no = enr.seq().clone().to_string();
                         let fork_id = get_fork_id_from_enr(enr);
                         let fork_digest = match fork_id {
                             Some(x) => hex::encode(&x.fork_digest),
@@ -283,6 +257,7 @@ impl Crawler {
                             index,
                             timestamp: timestamp.clone(),
                             node_id: node_id.clone(),
+                            peer_id: peer_id.clone(),
                             ip4: ip4.clone(),
                             tcp4: tcp4.clone(),
                             udp4: udp4.clone(),
@@ -316,31 +291,26 @@ impl Crawler {
                                     let predicate = move |enr: &Enr<CombinedKey>| {
                                         eth2_fork_predicate(enr)
                                     };
-                                    self.discv5.find_enr_predicate(
+                                    discv5.find_enr_predicate(
                                         target_random_node_id,
                                         predicate,
                                         32,
                                     )
                                 } else {
-                                    self.discv5.find_node(target_random_node_id)
+                                    discv5.find_node(target_random_node_id)
                                 }
                             }
-                            _ => (),
+                            _ => {
+                                discv5.find_node(target_random_node_id)
+                            }
                         };
                     } else {
-                        self.discv5.find_node(target_random_node_id);
+                        discv5.find_node(target_random_node_id);
                     }
                 }
-
-                match self.discv5.poll().expect("Error while polling swarm") {
-                    Async::Ready(Some(event)) => match event {
-                        _ => (),
-                    },
-                    Async::Ready(None) | Async::NotReady => break,
-                }
+                Some(_event) = discv5.next() => ()
             }
-            Ok(Async::NotReady)
-        }));*/
+        }
     }
 }
 
@@ -387,7 +357,6 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
             .allow_hyphen_values(true)
             .value_name("FORK-DIGEST")
             .help("Fork digest of the network to crawl.")
-            .possible_values(&["9925efd6","f071c66c",""])
             .default_value("")
             .takes_value(true),
     )
