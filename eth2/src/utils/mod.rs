@@ -1,7 +1,7 @@
 use crate::config::Eth2Config;
-use crate::libp2p::types::{GossipEncoding, GossipKind, GossipTopic, EnrBitfield};
 use crate::libp2p::discovery::enr_ext::{CombinedKeyExt, EnrExt};
-use discv5::enr::{Enr,CombinedKey};
+use crate::libp2p::types::{EnrBitfield, GossipEncoding, GossipKind, GossipTopic};
+use discv5::enr::{CombinedKey, Enr};
 //pub use enr_ext::{CombinedKeyExt, EnrExt};
 use crate::libp2p::NetworkConfig;
 use crate::ssz::types::BitVector;
@@ -73,7 +73,9 @@ pub fn get_attnets_from_enr(enr: &Enr<CombinedKey>) -> Vec<u64> {
     return attnets;
 }
 
-pub fn get_bitfield_from_enr(enr: &Enr<CombinedKey>) -> Result<EnrBitfield<MainnetEthSpec>, &'static str> {
+pub fn get_bitfield_from_enr(
+    enr: &Enr<CombinedKey>,
+) -> Result<EnrBitfield<MainnetEthSpec>, &'static str> {
     let bitfield_bytes = enr
         .get("attnets")
         .ok_or_else(|| "ENR bitfield non-existent")?;
