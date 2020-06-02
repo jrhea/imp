@@ -5,12 +5,13 @@ authors = ["jonny rhea <jonny.rhea@consensys.com>"]
 edition = "2018"
 
 [features]
-default = ["mothra"]
-local = ["mothra_local"]
+default = ["mothra","discv5"]
+local = ["mothra_local","discv5_local"]
 
 [dependencies]
 libp2p = { version = "0.19.1", default-features = false, features = ["tokio"], package = "libp2p-tcp" }
-discv5 = "0.1.0-alpha.3"
+discv5 = { version = "0.1.0-alpha.3", optional = true }
+discv5_local = { path = "../../../discv5", package="discv5", optional = true }
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}

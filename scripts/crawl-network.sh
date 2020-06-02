@@ -5,6 +5,7 @@
 trap post_process EXIT
 
 function post_process() {
+    sleep 10
     echo "Post processing starting..."
     rm -f $DATA_DIR/enrs.txt
     # group by node-id, seq_no, taking the highest seq no in each group and saving the enr
