@@ -26,8 +26,6 @@ use rand::Rng;
 
 #[derive(Serialize, Default)]
 struct EnrEntry {
-    index: u32,
-    timestamp: String,
     node_id: String,
     peer_id: String,
     ip4: String,
@@ -42,37 +40,103 @@ struct EnrEntry {
     enr: String,
 }
 
-struct Record {
-    index: u32,
-    timestamp: String,
-    enr: String,
+impl EnrEntry {
+    pub fn new(enr: &Enr<CombinedKey>) -> EnrEntry {
+        let ip4: String = match enr.ip() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+        let tcp4: String = match enr.tcp() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+        let udp4: String = match enr.udp() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+        let ip6: String = match enr.ip6() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+        let tcp6: String = match enr.tcp6() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+        let udp6: String = match enr.udp6() {
+            Some(x) => x.to_string(),
+            _ => "".to_string(),
+        };
+    
+        let node_id = hex::encode(enr.node_id().clone().raw());
+        let peer_id = "".to_string();
+        let seq_no = enr.seq().clone().to_string();
+        let fork_id = get_fork_id_from_enr(enr);
+        let fork_digest = match fork_id {
+            Some(x) => hex::encode(&x.fork_digest),
+            _ => "".to_string(),
+        };
+        let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
+        EnrEntry {
+            node_id: node_id.clone(),
+            peer_id: peer_id.clone(),
+            ip4: ip4.clone(),
+            tcp4: tcp4.clone(),
+            udp4: udp4.clone(),
+            ip6: ip6.clone(),
+            tcp6: tcp6.clone(),
+            udp6: udp6.clone(),
+            fork_digest: fork_digest.clone(),
+            seq_no: seq_no.clone(),
+            subnet_ids: subnet_ids.clone(),
+            enr: enr.to_base64(),
+        }
+    }
 }
 
+#[derive(Serialize, Default)]
+struct EnrRecord {
+    index: u32,
+    timestamp: String,
+    #[serde(skip_serializing)]
+    enr: EnrEntry,
+}
+
+impl EnrRecord {
+    pub fn new(index: u32, timestamp: String, enr_entry: EnrEntry) -> EnrRecord {
+        EnrRecord {
+            index,
+            timestamp,
+            enr: enr_entry
+        }
+    }
+}
+
+#[derive(Serialize, Default)]
 struct FindNodeRecord {
     index: u32,
     timestamp: String,
     target_node_id: String,
     closer_peers: Vec<String>,
 }
-
+#[derive(Serialize, Default)]
 struct DiscoveredRecord {
     index: u32,
     timestamp: String,
-    enr: String,
+    enr: EnrEntry,
 }
-
+#[derive(Serialize, Default)]
 struct NodeInsertedRecord { 
     index: u32,
     timestamp: String,
     node_id: String, 
     replaced: String
 }
-
+#[derive(Serialize, Default)]
 struct EnrAddedRecord { 
     index: u32,
     timestamp: String,
-    enr: String, 
-    replaced: String
+    enr: EnrEntry, 
+    replaced: EnrEntry
 }
 
 pub struct Crawler {
@@ -229,7 +293,7 @@ impl Crawler {
         //discv5.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
         let mut query_interval = tokio_02::time::interval(Duration::from_secs(30));
-        let mut enr_entries: HashMap<String, EnrEntry> = Default::default();
+        let mut enr_records: HashMap<String, EnrRecord> = Default::default();
 
         let mut enr_added_count = 0;
         let mut node_inserted_count = 0;
@@ -270,62 +334,15 @@ impl Crawler {
                     info!(log, "Connected Peers: {}", discv5.connected_peers());
 
                     for enr in discv5.enr_entries() {
-                        let ip4: String = match enr.ip() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let tcp4: String = match enr.tcp() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let udp4: String = match enr.udp() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let ip6: String = match enr.ip6() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let tcp6: String = match enr.tcp6() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let udp6: String = match enr.udp6() {
-                            Some(x) => x.to_string(),
-                            _ => "".to_string(),
-                        };
-                        let node_id = hex::encode(enr.node_id().clone().raw());
-                        let peer_id = "".to_string();
-                        let seq_no = enr.seq().clone().to_string();
-                        let fork_id = get_fork_id_from_enr(enr);
-                        let fork_digest = match fork_id {
-                            Some(x) => hex::encode(&x.fork_digest),
-                            _ => "".to_string(),
-                        };
+                        let enr_entry = EnrEntry::new(enr);
                         if target_enr == "".to_string()
-                            && (fork_digest == self.fork_digest || self.fork_digest.is_empty())
+                        && (enr_entry.fork_digest == self.fork_digest || self.fork_digest.is_empty())
                         {
                             target_enr = enr.to_base64();
                         }
-                        let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
-                        let entry = enr_entries.entry(node_id.clone()).or_default();
-                        *entry = EnrEntry {
-                            index,
-                            timestamp: timestamp.clone(),
-                            node_id: node_id.clone(),
-                            peer_id: peer_id.clone(),
-                            ip4: ip4.clone(),
-                            tcp4: tcp4.clone(),
-                            udp4: udp4.clone(),
-                            ip6: ip6.clone(),
-                            tcp6: tcp6.clone(),
-                            udp6: udp6.clone(),
-                            fork_digest: fork_digest.clone(),
-                            seq_no: seq_no.clone(),
-                            subnet_ids: subnet_ids.clone(),
-                            enr: enr.to_base64(),
-                        };
-                        let _ = wtr.serialize(entry);
+                        let enr_record = enr_records.entry(enr_entry.node_id.clone()).or_default();
+                        *enr_record = EnrRecord::new(index, timestamp.clone(), enr_entry);
+                        let _ = wtr.serialize((&enr_record, &enr_record.enr));
                         let _ = wtr.flush();
                         index += 1;
                     }
@@ -404,13 +421,7 @@ impl Crawler {
             }
         }
     }
-
-    // fn getEnrEntry(enr: Enr<CombinedKey>) -> EnrEntry {
-
-    // }
 }
-
-
 
 pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
     App::new("crawler")
