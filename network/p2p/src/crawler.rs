@@ -8,7 +8,7 @@ use discv5::{
     Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
 };
 use eth2::ssz::{Decode, Encode};
-use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr};
+use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr, get_fork_id_from_string, get_fork_id};
 use futures::future::Future;
 use futures::prelude::*;
 use slog::{debug, info, o, trace, warn};
@@ -22,9 +22,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio_02::sync::watch;
 use types::events::Events;
+use rand::Rng;
 
 #[derive(Serialize, Default)]
-struct Record {
+struct EnrEntry {
     index: u32,
     timestamp: String,
     node_id: String,
@@ -39,6 +40,39 @@ struct Record {
     seq_no: String,
     subnet_ids: String,
     enr: String,
+}
+
+struct Record {
+    index: u32,
+    timestamp: String,
+    enr: String,
+}
+
+struct FindNodeRecord {
+    index: u32,
+    timestamp: String,
+    target_node_id: String,
+    closer_peers: Vec<String>,
+}
+
+struct DiscoveredRecord {
+    index: u32,
+    timestamp: String,
+    enr: String,
+}
+
+struct NodeInsertedRecord { 
+    index: u32,
+    timestamp: String,
+    node_id: String, 
+    replaced: String
+}
+
+struct EnrAddedRecord { 
+    index: u32,
+    timestamp: String,
+    enr: String, 
+    replaced: String
 }
 
 pub struct Crawler {
@@ -112,6 +146,23 @@ impl Crawler {
         info!(log, "Local Node Id: {}", local_enr.node_id());
         //info!(log, "Local Peer Id: {}", local_enr.peer_id());
 
+        for enr in &boot_enr_list{
+            match get_fork_id_from_string(enr.to_string()) {
+                Some(x) => {
+                    if hex::encode(&x.fork_digest) == fork_digest{
+                        info!(log,"fork_digest:{:?},next_fork_version:{:?},next_fork_epoch:{:?}",hex::encode(&x.fork_digest),hex::encode(x.next_fork_version),u64::max_value());
+                        break;
+                    }
+                }
+                _ =>()
+            }
+        }
+
+        fn filter(enr: &Enr<CombinedKey>, ) -> bool {
+            let fork_id = get_fork_id(hex::decode("f6775d07").unwrap(),hex::decode("00000113").unwrap(),u64::max_value());
+            enr.get("eth2") == Some(&fork_id.as_ssz_bytes().clone())
+        };
+
         let config = Discv5ConfigBuilder::new()
             .request_timeout(Duration::from_secs(4))
             .request_retries(1) //default 1
@@ -119,10 +170,11 @@ impl Crawler {
             .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet   //default 10
             .query_parallelism(10) //default 3
             .query_peer_timeout(Duration::from_secs(2)) //default 2
-            .query_timeout(Duration::from_secs(60)) //default 60
+            .query_timeout(Duration::from_secs(6)) //default 60
             .session_timeout(Duration::from_secs(86400)) //default 86400
             .session_establish_timeout(Duration::from_secs(15)) //default 15
             .ip_limit(false) // limits /24 IP's in buckets. Enable for mainnet
+            //.table_filter(filter)
             .ping_interval(Duration::from_secs(300))
             .build();
 
@@ -141,7 +193,7 @@ impl Crawler {
         }
     }
 
-    pub async fn find_nodes(mut self, mut shutdown_rx: watch::Receiver<Events>, log: slog::Logger) {
+    pub async fn find_nodes(self, mut shutdown_rx: watch::Receiver<Events>, log: slog::Logger) {
         // construct the discv5 swarm, initializing an unused transport layer
         let mut discv5 =
             Discv5::new(self.local_enr, self.enr_key, self.config, self.socket_addr).unwrap();
@@ -173,12 +225,14 @@ impl Crawler {
             _ => format!("crawler.csv"),
         };
         let mut target_enr = "".to_string();
-        let target_random_node_id = NodeId::random();
-        discv5.find_node(target_random_node_id);
+        //let target_random_node_id = NodeId::random();
+        //discv5.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
-        let mut query_interval = tokio_02::time::interval(Duration::from_secs(5));
-        let mut peers: HashMap<String, Record> = Default::default();
+        let mut query_interval = tokio_02::time::interval(Duration::from_secs(30));
+        let mut enr_entries: HashMap<String, EnrEntry> = Default::default();
 
+        let mut enr_added_count = 0;
+        let mut node_inserted_count = 0;
         loop {
             tokio_02::select! {
                 x = shutdown_rx.recv() => {
@@ -212,7 +266,9 @@ impl Crawler {
                     let timestamp = format!("{}", Local::now().format("%Y-%m-%d][%H:%M:%S"));
                     // pick a random node target
                     let target_random_node_id = NodeId::random();
+                    
                     info!(log, "Connected Peers: {}", discv5.connected_peers());
+
                     for enr in discv5.enr_entries() {
                         let ip4: String = match enr.ip() {
                             Some(x) => x.to_string(),
@@ -252,8 +308,8 @@ impl Crawler {
                             target_enr = enr.to_base64();
                         }
                         let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
-                        let record = peers.entry(node_id.clone()).or_default();
-                        *record = Record {
+                        let entry = enr_entries.entry(node_id.clone()).or_default();
+                        *entry = EnrEntry {
                             index,
                             timestamp: timestamp.clone(),
                             node_id: node_id.clone(),
@@ -269,7 +325,7 @@ impl Crawler {
                             subnet_ids: subnet_ids.clone(),
                             enr: enr.to_base64(),
                         };
-                        let _ = wtr.serialize(record);
+                        let _ = wtr.serialize(entry);
                         let _ = wtr.flush();
                         index += 1;
                     }
@@ -279,8 +335,12 @@ impl Crawler {
                         );
                         match fork_id {
                             Some(x) => {
-                                if self.fork_digest.is_empty()
-                                    || self.fork_digest == hex::encode(&x.fork_digest)
+                                let mut rng = rand::thread_rng();
+                                let rnum: f64 = rng.gen();
+                                //info!(log,"rnum:{}",rnum);
+                                if (self.fork_digest.is_empty()
+                                    || self.fork_digest == hex::encode(&x.fork_digest))
+                                    && rnum > 0.25
                                 {
                                     let enr_fork_id = x.as_ssz_bytes();
                                     // predicate for finding nodes with a matching fork
@@ -291,12 +351,14 @@ impl Crawler {
                                     let predicate = move |enr: &Enr<CombinedKey>| {
                                         eth2_fork_predicate(enr)
                                     };
+                                    //info!(log,"calling find_enr_predicate()");
                                     discv5.find_enr_predicate(
                                         target_random_node_id,
                                         predicate,
                                         32,
                                     )
                                 } else {
+                                    //info!(log,"calling find_node()()");
                                     discv5.find_node(target_random_node_id)
                                 }
                             }
@@ -308,11 +370,47 @@ impl Crawler {
                         discv5.find_node(target_random_node_id);
                     }
                 }
-                Some(_event) = discv5.next() => ()
+                Some(event) = discv5.next() => {
+                    match event {
+                        Discv5Event::FindNodeResult { key, closer_peers, query_id } => {
+                            if !closer_peers.is_empty() {
+
+                            }
+                        },
+                        Discv5Event::Discovered( enr ) => {
+
+                        },
+                        Discv5Event::NodeInserted { node_id, replaced } => {
+                            let node_id_str = hex::encode(node_id.clone().raw());
+                            match replaced {
+                                Some(replaced_node_id) => {
+                                    let replaced_node_id_str = hex::encode(replaced_node_id.clone().raw());
+                                    info!(log, "NodeInserted: NodeId:{} ReplacedNodeId:{:?} Total{:?}",node_id_str, replaced_node_id_str, node_inserted_count);
+                                },
+                                None => {
+                                    node_inserted_count += 1;
+                                    info!(log, "NodeInserted: NodeId:{} Total{:?}",node_id_str, node_inserted_count);
+                                }
+                            }
+                        },
+                        Discv5Event::EnrAdded{ enr, replaced } => {
+                            enr_added_count += 1;
+                            info!(log, "EnrAdded: {:?}",enr_added_count)
+                        },
+                        _ => ()
+
+                    }
+                }
             }
         }
     }
+
+    // fn getEnrEntry(enr: Enr<CombinedKey>) -> EnrEntry {
+
+    // }
 }
+
+
 
 pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
     App::new("crawler")
