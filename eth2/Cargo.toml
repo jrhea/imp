@@ -5,12 +5,13 @@ authors = ["jonny rhea <jonny.rhea@consensys.com>"]
 edition = "2018"
 
 [features]
-default = ["eth2_libp2p", "eth2_types","eth2_config","eth2_testnet_config","eth2_ssz","eth2_ssz_derive","eth2_ssz_types"]
-local = ["eth2_libp2p_local", "eth2_types_local","eth2_config_local","eth2_testnet_config_local","eth2_ssz_local","eth2_ssz_derive_local","eth2_ssz_types_local"]
+default = ["discv5", "eth2_libp2p", "eth2_types","eth2_config","eth2_testnet_config","eth2_ssz","eth2_ssz_derive","eth2_ssz_types"]
+local = ["discv5_local", "eth2_libp2p_local", "eth2_types_local","eth2_config_local","eth2_testnet_config_local","eth2_ssz_local","eth2_ssz_derive_local","eth2_ssz_types_local"]
 
 [dependencies]
 dirs = "2.0.2"
-discv5 = "0.1.0-alpha.3"
+discv5 = { version = "0.1.0-alpha.3", optional = true }
+discv5_local = { path = "../../../discv5", package="discv5", optional = true }
 eth2_libp2p = { version = "0.1.2", package = "eth2-libp2p", optional = true }
 eth2_libp2p_local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
 eth2_types =  { version = "0.2.0",  package = "types", optional = true }

@@ -1,13 +1,15 @@
 use crate::config::Eth2Config;
 use crate::libp2p::discovery::enr_ext::{CombinedKeyExt, EnrExt};
 use crate::libp2p::types::{EnrBitfield, GossipEncoding, GossipKind, GossipTopic};
-use discv5::enr::{CombinedKey, Enr};
-//pub use enr_ext::{CombinedKeyExt, EnrExt};
 use crate::libp2p::NetworkConfig;
 use crate::ssz::types::BitVector;
 use crate::ssz::{Decode, Encode};
 use crate::testnet::config::Eth2TestnetConfig;
 use crate::types::{ChainSpec, EnrForkId, EthSpec, Hash256, MainnetEthSpec, Slot};
+#[cfg(not(feature = "local"))]
+use discv5::enr::{CombinedKey, Enr};
+#[cfg(feature = "local")]
+use discv5_local::enr::{CombinedKey, Enr};
 
 use std::path::PathBuf;
 
@@ -31,10 +33,24 @@ pub fn get_default_fork_id() -> EnrForkId {
     }
 }
 
-pub fn get_fork_id(fork_digest: Vec<u8>, next_fork_version: Vec<u8>, next_fork_epoch: u64) -> EnrForkId {
+pub fn get_fork_id(
+    fork_digest: Vec<u8>,
+    next_fork_version: Vec<u8>,
+    next_fork_epoch: u64,
+) -> EnrForkId {
     EnrForkId {
-        fork_digest: [fork_digest[0], fork_digest[1], fork_digest[2], fork_digest[3]],
-        next_fork_version: [next_fork_version[0],next_fork_version[1],next_fork_version[2],next_fork_version[3]],                //genesis_fork_version,
+        fork_digest: [
+            fork_digest[0],
+            fork_digest[1],
+            fork_digest[2],
+            fork_digest[3],
+        ],
+        next_fork_version: [
+            next_fork_version[0],
+            next_fork_version[1],
+            next_fork_version[2],
+            next_fork_version[3],
+        ], //genesis_fork_version,
         next_fork_epoch: next_fork_epoch.into(), //far_future_epoch,
     }
 }

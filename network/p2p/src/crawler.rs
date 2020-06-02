@@ -3,14 +3,25 @@ use csv;
 use serde_derive::{Serialize};
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
+#[cfg(not(feature = "local"))]
 use discv5::{
     enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
     Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
 };
+#[cfg(feature = "local")]
+use discv5_local::{
+    enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
+    Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
+};
+
 use eth2::ssz::{Decode, Encode};
-use eth2::utils::{get_attnets_from_enr, get_bitfield_from_enr, get_fork_id_from_enr, get_fork_id_from_string, get_fork_id};
+use eth2::utils::{
+    get_attnets_from_enr, get_bitfield_from_enr, get_fork_id, get_fork_id_from_enr,
+    get_fork_id_from_string,
+};
 use futures::future::Future;
 use futures::prelude::*;
+use rand::Rng;
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::collections::HashMap;
@@ -22,7 +33,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio_02::sync::watch;
 use types::events::Events;
-use rand::Rng;
 
 #[derive(Serialize, Default)]
 struct EnrEntry {
@@ -66,7 +76,7 @@ impl EnrEntry {
             Some(x) => x.to_string(),
             _ => "".to_string(),
         };
-    
+
         let node_id = hex::encode(enr.node_id().clone().raw());
         let peer_id = "".to_string();
         let seq_no = enr.seq().clone().to_string();
@@ -106,7 +116,7 @@ impl EnrRecord {
         EnrRecord {
             index,
             timestamp,
-            enr: enr_entry
+            enr: enr_entry,
         }
     }
 }
@@ -125,18 +135,18 @@ struct DiscoveredRecord {
     enr: EnrEntry,
 }
 #[derive(Serialize, Default)]
-struct NodeInsertedRecord { 
+struct NodeInsertedRecord {
     index: u32,
     timestamp: String,
-    node_id: String, 
-    replaced: String
+    node_id: String,
+    replaced: String,
 }
 #[derive(Serialize, Default)]
-struct EnrAddedRecord { 
+struct EnrAddedRecord {
     index: u32,
     timestamp: String,
-    enr: EnrEntry, 
-    replaced: EnrEntry
+    enr: EnrEntry,
+    replaced: EnrEntry,
 }
 
 pub struct Crawler {
@@ -210,20 +220,30 @@ impl Crawler {
         info!(log, "Local Node Id: {}", local_enr.node_id());
         //info!(log, "Local Peer Id: {}", local_enr.peer_id());
 
-        for enr in &boot_enr_list{
+        for enr in &boot_enr_list {
             match get_fork_id_from_string(enr.to_string()) {
                 Some(x) => {
-                    if hex::encode(&x.fork_digest) == fork_digest{
-                        info!(log,"fork_digest:{:?},next_fork_version:{:?},next_fork_epoch:{:?}",hex::encode(&x.fork_digest),hex::encode(x.next_fork_version),u64::max_value());
+                    if hex::encode(&x.fork_digest) == fork_digest {
+                        info!(
+                            log,
+                            "fork_digest:{:?},next_fork_version:{:?},next_fork_epoch:{:?}",
+                            hex::encode(&x.fork_digest),
+                            hex::encode(x.next_fork_version),
+                            u64::max_value()
+                        );
                         break;
                     }
                 }
-                _ =>()
+                _ => (),
             }
         }
 
-        fn filter(enr: &Enr<CombinedKey>, ) -> bool {
-            let fork_id = get_fork_id(hex::decode("f6775d07").unwrap(),hex::decode("00000113").unwrap(),u64::max_value());
+        fn filter(enr: &Enr<CombinedKey>) -> bool {
+            let fork_id = get_fork_id(
+                hex::decode("f6775d07").unwrap(),
+                hex::decode("00000113").unwrap(),
+                u64::max_value(),
+            );
             enr.get("eth2") == Some(&fork_id.as_ssz_bytes().clone())
         };
 
@@ -234,7 +254,7 @@ impl Crawler {
             .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet   //default 10
             .query_parallelism(10) //default 3
             .query_peer_timeout(Duration::from_secs(2)) //default 2
-            .query_timeout(Duration::from_secs(6)) //default 60
+            .query_timeout(Duration::from_secs(60)) //default 60
             .session_timeout(Duration::from_secs(86400)) //default 86400
             .session_establish_timeout(Duration::from_secs(15)) //default 15
             .ip_limit(false) // limits /24 IP's in buckets. Enable for mainnet
@@ -292,7 +312,7 @@ impl Crawler {
         //let target_random_node_id = NodeId::random();
         //discv5.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
-        let mut query_interval = tokio_02::time::interval(Duration::from_secs(30));
+        let mut query_interval = tokio_02::time::interval(Duration::from_secs(20));
         let mut enr_records: HashMap<String, EnrRecord> = Default::default();
 
         let mut enr_added_count = 0;
@@ -303,35 +323,38 @@ impl Crawler {
                     if let Some(Events::ShutdownMessage) = x {
                         warn!(
                             log,
-                            "{:?}: shutdown message received.",
+                            "{:?}: shutdown message received. Saving data to file.",
                             type_name::<Crawler>()
                         );
+                        let file = match self.output_mode.as_str() {
+                            "timehistory" => OpenOptions::new()
+                                .write(true)
+                                .create(true)
+                                .append(true)
+                                .open(self.datadir.join(&output_file))
+                                .unwrap(),
+                            _ => OpenOptions::new()
+                                .truncate(true)
+                                .write(true)
+                                .create(true)
+                                .append(false)
+                                .open(self.datadir.join(&output_file))
+                                .unwrap(),
+                        };
+                        let mut wtr = csv::Writer::from_writer(file);
+
+                        for enr_record in enr_records.values() {
+                            let _ = wtr.serialize((&enr_record, &enr_record.enr));
+                            let _ = wtr.flush();
+                        }
                         break;
                     }
                 },
                 _ = query_interval.next() => {
-                    let file = match self.output_mode.as_str() {
-                        "timehistory" => OpenOptions::new()
-                            .write(true)
-                            .create(true)
-                            .append(true)
-                            .open(self.datadir.join(&output_file))
-                            .unwrap(),
-                        _ => OpenOptions::new()
-                            .truncate(true)
-                            .write(true)
-                            .create(true)
-                            .append(false)
-                            .open(self.datadir.join(&output_file))
-                            .unwrap(),
-                    };
-                    let mut wtr = csv::Writer::from_writer(file);
                     let mut index = 1;
                     let timestamp = format!("{}", Local::now().format("%Y-%m-%d][%H:%M:%S"));
                     // pick a random node target
                     let target_random_node_id = NodeId::random();
-                    
-                    info!(log, "Connected Peers: {}", discv5.connected_peers());
 
                     for enr in discv5.enr_entries() {
                         let enr_entry = EnrEntry::new(enr);
@@ -342,10 +365,10 @@ impl Crawler {
                         }
                         let enr_record = enr_records.entry(enr_entry.node_id.clone()).or_default();
                         *enr_record = EnrRecord::new(index, timestamp.clone(), enr_entry);
-                        let _ = wtr.serialize((&enr_record, &enr_record.enr));
-                        let _ = wtr.flush();
                         index += 1;
                     }
+                    info!(log, "Connected Peers: {}", discv5.connected_peers());
+                    info!(log, "Enr Entries: {:?}", enr_records.len());
                     if target_enr != "".to_string() {
                         let fork_id = get_fork_id_from_enr(
                             &target_enr.parse::<Enr<CombinedKey>>().unwrap(),
@@ -380,10 +403,12 @@ impl Crawler {
                                 }
                             }
                             _ => {
+                                //info!(log,"calling find_node()()");
                                 discv5.find_node(target_random_node_id)
                             }
                         };
                     } else {
+                        //info!(log,"calling find_node()()");
                         discv5.find_node(target_random_node_id);
                     }
                 }
@@ -402,17 +427,17 @@ impl Crawler {
                             match replaced {
                                 Some(replaced_node_id) => {
                                     let replaced_node_id_str = hex::encode(replaced_node_id.clone().raw());
-                                    info!(log, "NodeInserted: NodeId:{} ReplacedNodeId:{:?} Total{:?}",node_id_str, replaced_node_id_str, node_inserted_count);
+                                    debug!(log, "NodeInserted: NodeId:{} ReplacedNodeId:{:?} Total: {:?}",node_id_str, replaced_node_id_str, node_inserted_count);
                                 },
                                 None => {
                                     node_inserted_count += 1;
-                                    info!(log, "NodeInserted: NodeId:{} Total{:?}",node_id_str, node_inserted_count);
+                                    debug!(log, "NodeInserted: NodeId:{} Total: {:?}",node_id_str, node_inserted_count);
                                 }
                             }
                         },
                         Discv5Event::EnrAdded{ enr, replaced } => {
                             enr_added_count += 1;
-                            info!(log, "EnrAdded: {:?}",enr_added_count)
+                            debug!(log, "EnrAdded: {:?}",enr_added_count)
                         },
                         _ => ()
 
