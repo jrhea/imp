@@ -1,21 +1,23 @@
 #!/bin/bash
 
-# Usage: sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory
+# Usage: sh crawl-network.sh schlesi|topaz num_crawlers snapshot|timehsitory|none
 
 trap post_process EXIT
 
 function post_process() {
     sleep 10
-    echo "Post processing starting..."
-    rm -f $DATA_DIR/enrs.txt
-    # group by node-id, seq_no, taking the highest seq no in each group and saving the enr
-    if [ -z "$FORK_DIGEST" ]; then
-        tail -n+2 $DATA_DIR/crawler* | sed 's/\".*\"//g' |  cut -d',' -f3,12,14 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
-    else
-        tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' |  cut -d',' -f3,12,14 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+    if [ "$OUTPUT_MODE" != "none" ]; then
+        echo "Post processing starting..."
+        rm -f $DATA_DIR/enrs.txt
+        # group by node-id, seq_no, taking the highest seq no in each group and saving the enr
+        if [ -z "$FORK_DIGEST" ]; then
+            tail -n+2 $DATA_DIR/crawler* | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+        else
+            tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+        fi
+        echo "Post processing complete"
+        echo "exit"
     fi
-    echo "Post processing complete"
-    echo "exit"
     kill 0
 }
 
@@ -68,9 +70,11 @@ else
     BOOTNODES=$BOOTSTRAP_BOOTNODES
 fi
 
-echo "Backing up $DATA_DIR to $BACKUP_DIR"
-cp -r $DATA_DIR $BACKUP_DIR/
-rm -f $DATA_DIR/crawler*
+if [ "$OUTPUT_MODE" != "none" ]; then
+    echo "Backing up $DATA_DIR to $BACKUP_DIR"
+    cp -r $DATA_DIR $BACKUP_DIR/
+    rm -f $DATA_DIR/crawler*
+fi
 PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
     echo cat $DATA_DIR/crawler$PORT.csv
