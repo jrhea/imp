@@ -34,7 +34,7 @@ use std::time::Duration;
 use tokio_02::sync::watch;
 use types::events::Events;
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Clone)]
 struct EnrEntry {
     node_id: String,
     peer_id: String,
@@ -44,6 +44,8 @@ struct EnrEntry {
     ip6: String,
     tcp6: String,
     udp6: String,
+    next_fork_version: String,
+    next_fork_epoch: String,
     fork_digest: String,
     seq_no: String,
     subnet_ids: String,
@@ -81,9 +83,13 @@ impl EnrEntry {
         let peer_id = "".to_string();
         let seq_no = enr.seq().clone().to_string();
         let fork_id = get_fork_id_from_enr(enr);
-        let fork_digest = match fork_id {
-            Some(x) => hex::encode(&x.fork_digest),
-            _ => "".to_string(),
+        let (next_fork_version, next_fork_epoch, fork_digest) = match fork_id {
+            Some(x) => (
+                hex::encode(x.next_fork_version),
+                format!("{}", x.next_fork_epoch),
+                hex::encode(&x.fork_digest),
+            ),
+            _ => ("".to_string(), "".to_string(), "".to_string()),
         };
         let subnet_ids = format!("{:?}", get_attnets_from_enr(enr));
         EnrEntry {
@@ -95,6 +101,8 @@ impl EnrEntry {
             ip6: ip6.clone(),
             tcp6: tcp6.clone(),
             udp6: udp6.clone(),
+            next_fork_version: next_fork_version.clone(),
+            next_fork_epoch: next_fork_epoch.clone(),
             fork_digest: fork_digest.clone(),
             seq_no: seq_no.clone(),
             subnet_ids: subnet_ids.clone(),
@@ -103,7 +111,7 @@ impl EnrEntry {
     }
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Clone)]
 struct EnrRecord {
     index: u32,
     timestamp: String,
@@ -117,6 +125,12 @@ impl EnrRecord {
             index,
             timestamp,
             enr: enr_entry,
+        }
+    }
+    pub fn get_enr(&self) -> Option<Enr<CombinedKey>> {
+        match self.enr.enr.parse::<Enr<CombinedKey>>() {
+            Ok(x) => Some(x),
+            _ => None,
         }
     }
 }
@@ -309,10 +323,9 @@ impl Crawler {
             _ => format!("crawler.csv"),
         };
         let mut target_enr = "".to_string();
-        //let target_random_node_id = NodeId::random();
-        //discv5.find_node(target_random_node_id);
         // construct a time interval to search for new peers.
-        let mut query_interval = tokio_02::time::interval(Duration::from_secs(20));
+        let mut query_interval = tokio_02::time::interval(Duration::from_secs(10));
+        let mut output_interval = tokio_02::time::interval(Duration::from_secs(30));
         let mut enr_records: HashMap<String, EnrRecord> = Default::default();
 
         let mut enr_added_count = 0;
@@ -323,31 +336,29 @@ impl Crawler {
                     if let Some(Events::ShutdownMessage) = x {
                         warn!(
                             log,
-                            "{:?}: shutdown message received. Saving data to file.",
+                            "{:?}: shutdown message received.",
                             type_name::<Crawler>()
                         );
-                        let file = match self.output_mode.as_str() {
-                            "timehistory" => OpenOptions::new()
-                                .write(true)
-                                .create(true)
-                                .append(true)
-                                .open(self.datadir.join(&output_file))
-                                .unwrap(),
-                            _ => OpenOptions::new()
-                                .truncate(true)
-                                .write(true)
-                                .create(true)
-                                .append(false)
-                                .open(self.datadir.join(&output_file))
-                                .unwrap(),
+                        match self.output_mode.as_str() {
+                            "snapshot" => {
+                                info!(log,"Output is enabled.  Saving data to file");
+                                Crawler::write_file(&enr_records, self.datadir.join(&output_file));
+                                break;
+                            },
+                            _ => {
+                                info!(log,"Output is disabled.  Not saving to file.");
+                                break
+                            }
                         };
-                        let mut wtr = csv::Writer::from_writer(file);
-
-                        for enr_record in enr_records.values() {
-                            let _ = wtr.serialize((&enr_record, &enr_record.enr));
-                            let _ = wtr.flush();
-                        }
-                        break;
+                    }
+                },
+                _ = output_interval.next() => {
+                    match self.output_mode.as_str() {
+                        "snapshot" => {
+                            info!(log,"Output is enabled.  Saving data to file");
+                            Crawler::write_file(&enr_records, self.datadir.join(&output_file));
+                        },
+                        _ => ()
                     }
                 },
                 _ = query_interval.next() => {
@@ -380,13 +391,34 @@ impl Crawler {
                                 //info!(log,"rnum:{}",rnum);
                                 if (self.fork_digest.is_empty()
                                     || self.fork_digest == hex::encode(&x.fork_digest))
-                                    && rnum > 0.25
+                                    && rnum > 0.50
                                 {
-                                    let enr_fork_id = x.as_ssz_bytes();
-                                    // predicate for finding nodes with a matching fork
+                                    let node_ids_discovered: Vec<String> = enr_records.keys().cloned().collect();
+                                    let num_on_fork = enr_records.values().filter(|enr_record| {
+                                        match enr_record.get_enr() {
+                                            Some(y) => {
+                                                let enr_record_fork_digest = match get_fork_id_from_enr(&y) {
+                                                    Some(fork_id) => hex::encode(&fork_id.fork_digest),
+                                                    _ => "".to_string(),
+                                                };
+                                                let fork_id_match = hex::encode(&x.fork_digest) == enr_record_fork_digest;
+                                                //info!(log,"fork_digest:{} {:?}",enr_record_fork_digest,fork_id_match);
+                                                fork_id_match
+                                            },
+                                            _ => false
+                                        }
+                                    }).count();
+                                    info!(log, "Enr Entries on correct fork_digest: {:?}", num_on_fork);
+                                    // predicate for finding nodes with a matching fork_digest
                                     let eth2_fork_predicate =
                                         move |enr: &Enr<CombinedKey>| {
-                                            enr.get("eth2") == Some(&enr_fork_id.clone())
+                                            let enr_node_id = hex::encode(enr.node_id().raw());
+                                            let enr_fork_digest = match get_fork_id_from_enr(&enr) {
+                                                Some(fork_id) => hex::encode(&fork_id.fork_digest),
+                                                _ => "".to_string(),
+                                            };
+                                            hex::encode(&x.fork_digest) == enr_fork_digest
+                                            && !node_ids_discovered.contains(&enr_node_id)
                                         };
                                     let predicate = move |enr: &Enr<CombinedKey>| {
                                         eth2_fork_predicate(enr)
@@ -437,13 +469,28 @@ impl Crawler {
                         },
                         Discv5Event::EnrAdded{ enr, replaced } => {
                             enr_added_count += 1;
-                            debug!(log, "EnrAdded: {:?}",enr_added_count)
+                            trace!(log, "EnrAdded: {:?}",enr_added_count)
                         },
                         _ => ()
 
                     }
                 }
             }
+        }
+    }
+    fn write_file(records: &HashMap<String, EnrRecord>, path: PathBuf) {
+        let file = OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .append(false)
+            .open(path)
+            .unwrap();
+        let mut wtr = csv::Writer::from_writer(file);
+
+        for enr_record in records.values() {
+            let _ = wtr.serialize((&enr_record, &enr_record.enr));
+            let _ = wtr.flush();
         }
     }
 }
@@ -459,7 +506,7 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
             .value_name("OUTPUT-MODE")
             .help("Controls how data is collected and output.")
             .takes_value(true)
-            .possible_values(&["snapshot","timehistory"])
+            .possible_values(&["snapshot","none"])
             .default_value("snapshot"),
     )
     .arg(
