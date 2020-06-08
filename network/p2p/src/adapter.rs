@@ -2,6 +2,7 @@ use clap::ArgMatches;
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use eth2::ssz::{Decode, Encode};
 
@@ -9,9 +10,44 @@ use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_strin
 use types::events::Events;
 
 #[cfg(not(feature = "local"))]
-use mothra::{Mothra, NetworkGlobals, NetworkMessage};
+use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
 #[cfg(feature = "local")]
-use mothra_local::{Mothra, NetworkGlobals, NetworkMessage};
+use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
+
+struct Client{
+    gossip_messages: HashMap<String, Vec<u8>>,
+}
+
+impl Client {
+    pub fn new() -> Self {
+        Client{
+            gossip_messages: Default::default()
+        }
+    }
+}
+
+impl Subscriber for Client {
+    fn discovered_peer(&self, peer: String) {
+        println!("Rust: discovered peer");
+        println!("peer={:?}", peer);
+    }
+    
+    fn receive_gossip(&self, message_id: String, peer_id: String, topic: String, data: Vec<u8>) {
+        println!("Rust: received gossip");
+        println!("message id={:?}", message_id);
+        println!("peer id={:?}", peer_id);
+        println!("topic={:?}", topic);
+        println!("data={:?}", String::from_utf8_lossy(&data));
+    }
+    
+    fn receive_rpc(&self, method: String, req_resp: u8, peer: String, data: Vec<u8>) {
+        println!("Rust: received rpc");
+        println!("method={:?}", method);
+        println!("req_resp={:?}", req_resp);
+        println!("peer={:?}", peer);
+        println!("data={:?}", String::from_utf8_lossy(&data));
+    }
+}
 
 // Holds variables needed to interacts with mothra
 pub struct Adapter {
@@ -89,15 +125,13 @@ impl Adapter {
                 }
             }
         };
-
+        let client = Box::new(Client::new()) as Box<dyn Subscriber + Send>;
         // instantiate mothra
         let (network_globals, network_send, network_exit) = Mothra::new(
             config,
             enr_fork_id_bytes,
             &executor,
-            on_discovered_peer,
-            on_receive_gossip,
-            on_receive_rpc,
+            client,
             mothra_log,
         )
         .unwrap();
@@ -114,23 +148,4 @@ impl Adapter {
     pub fn close(self) -> Result<(), ()> {
         self.network_exit.send(())
     }
-}
-
-fn on_discovered_peer(peer: String) {
-    println!("new peer discovered");
-    println!("peer: {:?}", peer);
-}
-
-fn on_receive_gossip(topic: String, data: Vec<u8>) {
-    println!("gossip message received");
-    println!("topic: {:?}", topic);
-    println!("data: {:?}", String::from_utf8_lossy(&data));
-}
-
-fn on_receive_rpc(method: String, req_resp: u8, peer: String, data: Vec<u8>) {
-    println!("rpc message received");
-    println!("method: {:?}", method);
-    println!("req_resp: {:?}", req_resp);
-    println!("peer: {:?}", peer);
-    println!("data: {:?}", String::from_utf8_lossy(&data));
 }
