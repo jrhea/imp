@@ -61,19 +61,22 @@ impl Service {
     pub async fn spawn(self, mut shutdown_rx: watch::Receiver<Events>) {
         let run_mode = self.run_mode;
         let p2p_adapter = self.p2p_adapter;
-        let crawler = self.crawler.unwrap();
+        let crawler = self.crawler;
         let crawler_log = self.log.clone();
         let service_log = self.log.clone();
         let crawler_shutdown_rx = shutdown_rx.clone();
         task::spawn(async move {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
-                    crawler
-                        .find_nodes(
-                            crawler_shutdown_rx,
-                            crawler_log.new(o!("Network Service" => "Crawler")),
-                        )
-                        .await;
+                    let _ = match crawler {
+                        Some(crawler) => crawler
+                                .find_nodes(
+                                    crawler_shutdown_rx,
+                                    crawler_log.new(o!("Network Service" => "Crawler")),
+                                )
+                                .await,
+                        None => (),
+                    };
                 });
             }
 
