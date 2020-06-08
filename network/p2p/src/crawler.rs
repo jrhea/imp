@@ -427,7 +427,7 @@ impl Crawler {
                                     discv5.find_enr_predicate(
                                         target_random_node_id,
                                         predicate,
-                                        32,
+                                        256,
                                     )
                                 } else {
                                     //info!(log,"calling find_node()()");
