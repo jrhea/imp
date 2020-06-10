@@ -17,7 +17,7 @@ use discv5_local::{
 use eth2::ssz::{Decode, Encode};
 use eth2::utils::{
     get_attnets_from_enr, get_bitfield_from_enr, get_fork_id, get_fork_id_from_enr,
-    get_fork_id_from_string,
+    get_fork_id_from_string,EnrExt
 };
 use futures::future::Future;
 use futures::prelude::*;
@@ -80,7 +80,7 @@ impl EnrEntry {
         };
 
         let node_id = hex::encode(enr.node_id().clone().raw());
-        let peer_id = "".to_string();
+        let peer_id = enr.peer_id().to_string();
         let seq_no = enr.seq().clone().to_string();
         let fork_id = get_fork_id_from_enr(enr);
         let (next_fork_version, next_fork_epoch, fork_digest) = match fork_id {
