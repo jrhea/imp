@@ -14,6 +14,7 @@ function post_process() {
             tail -n+2 $DATA_DIR/crawler* | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
         else
             tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+            tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' | grep -v "\[\]"|  cut -d',' -f3,14,15,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f4 | sed -e "s/^enr://" > $DATA_DIR/validating_enrs.txt
         fi
         echo "Post processing complete"
         echo "exit"
