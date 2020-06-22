@@ -15,7 +15,7 @@ discv5_local = { path = "../../../discv5", package="discv5", optional = true }
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
-mothra = { git = "https://github.com/prrkl/mothra", branch = "master", package = "mothra", optional = true }
+mothra = { git = "https://github.com/prrkl/mothra", branch = "prkl", package = "mothra", optional = true }
 mothra_local = { path = "../../../mothra/core", package = "mothra", optional = true }
 
 tokio-compat = { version = "0.1.5", features = ["rt-full"] }
@@ -33,3 +33,4 @@ serde = "1.0.106"
 chrono = "0.4.11"
 dirs = "2.0.2"
 rand = "0.7.3"
+snap = "1.0.0"

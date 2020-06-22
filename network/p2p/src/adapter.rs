@@ -3,26 +3,113 @@ use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
-
+use chrono::Local;
+use std::time::SystemTime;
+use serde_derive::{Serialize};
 use eth2::ssz::{Decode, Encode};
-
+use eth2::types::{SignedBeaconBlock,MainnetEthSpec};
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
+use snap::raw::{decompress_len, Decoder, Encoder};
 use types::events::Events;
+use std::fs::{File,OpenOptions};
+use std::cell::Cell;
+use csv;
 
 #[cfg(not(feature = "local"))]
 use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
 #[cfg(feature = "local")]
 use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
 
-struct Client{
-    gossip_messages: HashMap<String, Vec<u8>>,
+#[derive(Serialize, Default, Clone)]
+struct GossipRecord {
+    index: u64,
+    timestamp: String,
+    message_id: String,
+    peer_id: String,
+    topic: String,
+    message_size: usize,
+    slot: u64,
+    proposer_index: u64,
+    
+}
+//SignedBeaconBlock
+impl GossipRecord {
+    pub fn new(index: u64, timestamp: String, message_id: String, peer_id: String, topic: String, data: Vec<u8>) -> Result<Self,String> {
+        let mut decoder = Decoder::new();
+        let mut decompressed_data: Vec<u8> = Vec::new();
+        match decompress_len(&data) {
+            Ok(n) if n > 1_048_576 => {
+                return Err("ssz_snappy decoded data > GOSSIP_MAX_SIZE".into());
+            }
+            Ok(n) => decompressed_data.resize(n, 0),
+            Err(e) => {
+                return Err(format!("{}", e));
+            }
+        };
+        let mut decoder = Decoder::new();
+        let data = match decoder.decompress(&data, &mut decompressed_data) {
+            Ok(n) => {
+                decompressed_data.truncate(n);
+                &decompressed_data
+            }
+            Err(e) => return Err(format!("{}", e)),
+        };
+        match SignedBeaconBlock::<MainnetEthSpec>::from_ssz_bytes(&data){
+            Ok(decoded_data) => {
+                Ok(GossipRecord {
+                    index,
+                    timestamp,
+                    message_id,
+                    peer_id,
+                    topic,
+                    message_size: data.len(),
+                    slot: decoded_data.message.slot.into(),
+                    proposer_index: decoded_data.message.proposer_index
+                })
+            },
+            Err(e) => return Err(format!("{:#?}", e)),
+        }
+    }
+
+}
+
+struct Client {
+    num_records: Cell<u64>
 }
 
 impl Client {
     pub fn new() -> Self {
+
         Client{
-            gossip_messages: Default::default()
+            num_records: Cell::new(0)
         }
+    }
+
+    fn write_file(&self, record: GossipRecord) {
+        let mut wtr = match record.index {
+            0 => {
+                let file = OpenOptions::new()
+                .truncate(true)
+                .write(true)
+                .create(true)
+                .append(false)
+                .open("/Users/jonny/.imp/gossip.csv")
+                .unwrap();
+                csv::WriterBuilder::new().has_headers(true).from_writer(file)
+            }
+            _ => {
+                let file = OpenOptions::new()
+                .truncate(false)
+                .write(true)
+                .create(true)
+                .append(true)
+                .open("/Users/jonny/.imp/gossip.csv")
+                .unwrap();
+                csv::WriterBuilder::new().has_headers(false).from_writer(file)
+            }
+        };
+        let _ = wtr.serialize(&record);
+        let _ = wtr.flush();
     }
 }
 
@@ -33,11 +120,24 @@ impl Subscriber for Client {
     }
     
     fn receive_gossip(&self, message_id: String, peer_id: String, topic: String, data: Vec<u8>) {
-        println!("Rust: received gossip");
-        println!("message id={:?}", message_id);
-        println!("peer id={:?}", peer_id);
-        println!("topic={:?}", topic);
-        println!("data={:?}", String::from_utf8_lossy(&data));
+        if topic.contains("beacon_block") {
+            let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                Ok(n) => format!("{}.{}",n.as_secs(),n.subsec_millis()),
+                Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+            };
+            match GossipRecord::new(self.num_records.get(), timestamp.clone(), message_id.clone(), peer_id.clone(), topic.clone(), data) {
+                Ok(record) => {
+                    self.write_file(record);
+                    self.num_records.set(self.num_records.get() + 1);
+                    println!("Rust: received gossip at {}",timestamp);
+                    println!("message id={:?}", message_id);
+                    println!("peer id={:?}\n", peer_id);
+                }
+                Err(e) => {
+                    println!("Error:{}",e)
+                }
+            }
+        }
     }
     
     fn receive_rpc(&self, method: String, req_resp: u8, peer: String, data: Vec<u8>) {
@@ -101,6 +201,12 @@ impl Adapter {
             Some(protocol_version),
             &mothra_arg_matches,
         );
+        config.network_config.max_peers = 1000;
+        config.network_config.propagation_percentage = Some(0);
+        config.network_config.gs_config.mesh_n_high = 76;
+        config.network_config.gs_config.mesh_n_low = 25;
+        config.network_config.gs_config.mesh_n = 50;
+        config.network_config.gs_config.gossip_lazy = 0;
 
         // TODO
         // Option: Learn fork_id from supplied cli arg directly
