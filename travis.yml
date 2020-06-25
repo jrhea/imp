@@ -1,24 +1,14 @@
-# claim: commits will run rustfmt & clippy themselves
-# claim: don't see need to cache dependencies
-#tk should we include an os: osx line?
 language: rust
 script:
-  - cargo build --verbose --all #tk all, since project is a workspace
-	- cargo test --verbose --all
-	- cargo fmt --check # probably unnecessary
-	- |
-	  if [[ "$TRAVIS_RUST_VERSION" == nightly*]]; then
-			 cargo build --no-default-features
-		fi
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+  - cargo fmt
 
-# claim: should test against all channels, not just stable
 rust:
-	- stable
-	- beta
-	- nightly
-matrix: #tk matrix=jobs, but run in parallel
-	allow_failures:
-		- rust: nightly #tk any breakage in nightly will not fail the build
-		fast_finish: true #tk faast
-		install:
-			-rustup component add rustfmt #tk if rustfmt is kept in, which I claim it won't be
+  - stable
+  - beta
+matrix:
+  allow_failures:
+    fast_finish: true
+    install:
+      -rustup component add rustfmt
