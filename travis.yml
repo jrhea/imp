@@ -1,14 +1,17 @@
 language: rust
 os: osx
+# project is a workspace, so pass --all to test all member crates
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
-  - cargo fmt
+  - cargo fmt --all
 
 rust:
   - stable
   - beta
-matrix:
-  allow_failures:
-    install:
-      -rustup component add rustfmt
+
+# cache dependencies to only recomile if compiler is upgraded
+cache: cargo
+
+jobs:
+  fast_finish: true
