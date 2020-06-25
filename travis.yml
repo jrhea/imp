@@ -10,5 +10,9 @@ rust:
   - beta
 matrix:
   allow_failures:
+<<<<<<< HEAD
+=======
+    fast_finish: true
+>>>>>>> a0acc14593c8381c901b46c589411afdfce02267
     install:
       -rustup component add rustfmt
