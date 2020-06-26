@@ -3,7 +3,11 @@ os: osx
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
+<<<<<<< HEAD
   - cargo fmt --all
+=======
+  - cargo fmt
+>>>>>>> 756b1b1d82052cda8365a96dd379e6d3635bc175
 
 rust:
   - stable
