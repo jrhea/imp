@@ -119,6 +119,17 @@ impl Client {
     }
 }
 
+fn pad_millis(millis: u32) -> Option<String> {
+    let m = millis.to_string();
+    match m.len() {
+        3 => Some(m),
+        2 => Some(format!("{}{}", "0", m)),
+        1 => Some(format!("{}{}", "00", m)),
+        0 => Some(String::from("000")), // this should never occur
+        _ => None,
+    }
+}
+
 impl Subscriber for Client {
     fn discovered_peer(&self, peer: String) {
         println!("Rust: discovered peer");
@@ -126,18 +137,13 @@ impl Subscriber for Client {
     }
 
     fn receive_gossip(&self, message_id: String, peer_id: String, topic: String, data: Vec<u8>) {
-        let pad_millis = |millis: u32| {
-            let m = millis.to_string();
-            match m.len() {
-                3 => m,
-                2 => format!("{}{}", "0", m),
-                1 => format!("{}{}", "00", m),
-                _ => String::from("000"),
-            }
-        };
         if topic.contains("beacon_block") {
             let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-                Ok(n) => format!("{}.{}", n.as_secs(), pad_millis(n.subsec_millis())),
+                Ok(n) => format!(
+                    "{}.{}",
+                    n.as_secs(),
+                    pad_millis(n.subsec_millis()).expect("unexpected subsec_millis value")
+                ),
                 Err(_) => panic!("SystemTime before UNIX EPOCH!"),
             };
             match GossipRecord::new(
