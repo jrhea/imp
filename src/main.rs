@@ -7,9 +7,8 @@ use p2p;
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
 use std::thread::sleep;
-use tokio_01::prelude::future::Future;
-use tokio_02::sync::watch;
-use tokio_02::{signal, time::timeout, time::Duration};
+use tokio::sync::watch;
+use tokio::{signal, time::timeout, time::Duration};
 use types::events::Events;
 
 const CLIENT_NAME: &str = "imp";
@@ -68,12 +67,12 @@ fn main() -> Result<(), std::io::Error> {
     let client_name: String = CLIENT_NAME.into();
     let platform: String = format!("v{}", env!("CARGO_PKG_VERSION"));
 
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    let mut runtime = tokio::runtime::Runtime::new()?;
 
     info!(log, "Starting imp");
 
     let network_service = NetworkService::new(
-        &runtime.executor(),
+        &runtime,
         client_name,
         platform,
         p2p_protocol_version.into(),
@@ -86,7 +85,7 @@ fn main() -> Result<(), std::io::Error> {
     let (shutdown_tx, shutdown_rx) = watch::channel::<Events>(Events::None);
 
     // main "event loop"
-    runtime.block_on_std(async move {
+    runtime.block_on(async move {
         async move {
             network_service.spawn(shutdown_rx.clone()).await;
             agent.spawn(shutdown_rx).await;
@@ -102,11 +101,7 @@ fn main() -> Result<(), std::io::Error> {
     sleep(Duration::new(1, 0));
 
     // Shutdown the runtime
-    let res = runtime.shutdown_now().wait();
-
-    if res.is_err() {
-        debug!(log, "operation timed out");
-    }
+    let _ = runtime.shutdown_timeout(tokio::time::Duration::from_millis(300));
 
     warn!(log.clone(), "Exiting imp.");
     Ok(())

@@ -12,8 +12,7 @@ Cargo.lock
 
 .rustc_info.json
 **/.DS_Store
-scripts/*.txt
 *.log
-scripts/output
+scripts/junk
 .schlesi/
 .topaz/

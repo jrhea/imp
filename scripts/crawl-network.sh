@@ -41,6 +41,9 @@ if [ $NETWORK = "witti" ]; then
 elif [ $NETWORK = "topaz" ]; then
     FORK_DIGEST=f071c66c
     BOOTSTRAP_BOOTNODES=-Ku4QAGwOT9StqmwI5LHaIymIO4ooFKfNkEjWa0f1P8OsElgBh2Ijb-GrD_-b9W4kcPFcwmHQEy5RncqXNqdpVo1heoBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpAAAAAAAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A
+elif [ $NETWORK = "altona" ]; then
+    FORK_DIGEST=fdca39b0
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/goerli/altona/master/altona/bootnodes.txt | grep "enr:" | sed -e "s/^enr://" | tr "\n" "," |sed -e "s/,$//g")
 else
     echo network $NETWORK "not supported"
     exit 1
@@ -48,14 +51,14 @@ fi
 
 TIMESTAMP=$(date +%s)
 DATA_DIR=$HOME/.$NETWORK
-BACKUP_DIR=$HOME/.imp/$TIMESTAMP
+BACKUP_DIR=$HOME/.imp/$NETWORK/$TIMESTAMP
 if [ $HOME = "/" ]; then
     if [[ -z "${PWD//*\/scripts*/}" ]]; then
         DATA_DIR=$PWD/../.$NETWORK
-        BACKUP_DIR=$PWD/../.imp/$TIMESTAMP
+        BACKUP_DIR=$PWD/../.imp/$NETWORK/$TIMESTAMP
     else
         DATA_DIR=$PWD/.$NETWORK
-        BACKUP_DIR=$PWD/.imp/$TIMESTAMP
+        BACKUP_DIR=$PWD/.imp/$NETWORK/$TIMESTAMP
     fi
 fi
 mkdir -p $DATA_DIR
