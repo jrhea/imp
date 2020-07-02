@@ -35,6 +35,7 @@ enr-count-docker:
 
 touch: 
 	cargo update -p https://github.com/prrkl/mothra#0.1.0
+	cargo update -p discv5
 	cargo update -p tree_hash
 	cargo update -p tree_hash_derive
 	cargo update -p eth2_ssz

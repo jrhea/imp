@@ -14,11 +14,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 use types::events::Events;
+use tokio::sync::watch;
+use tokio::{signal, sync::mpsc, task, time, runtime};
+use std::fs::{File,OpenOptions};
+use std::cell::Cell;
+use csv;
 
 #[cfg(not(feature = "local"))]
-use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
+use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor};
 #[cfg(feature = "local")]
-use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber};
+use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor};
 
 #[derive(Serialize, Default, Clone)]
 struct GossipRecord {
@@ -178,15 +183,15 @@ impl Subscriber for Client {
 // Holds variables needed to interacts with mothra
 pub struct Adapter {
     network_globals: Arc<NetworkGlobals>,
-    network_send: tokio_01::sync::mpsc::UnboundedSender<NetworkMessage>,
-    network_exit: tokio_01::sync::oneshot::Sender<()>,
+    network_send: mpsc::UnboundedSender<NetworkMessage>,
+    network_exit_signal: exit_future::Signal,
     enr_fork_id: Option<eth2::types::EnrForkId>,
     log: slog::Logger,
 }
 
 impl Adapter {
     pub fn new(
-        executor: &tokio_compat::runtime::TaskExecutor,
+        runtime: &runtime::Runtime,
         client_name: String,
         platform: String,
         protocol_version: String,
@@ -241,6 +246,7 @@ impl Adapter {
         let (enr_fork_id, enr_fork_id_bytes) = match get_fork_id_from_string(boot_nodes[0].clone())
         {
             Some(enr_fork_id) => {
+                info!(log,"Fork-Digest: {}",hex::encode(enr_fork_id.fork_digest));
                 // configure gossip topics
                 config.network_config.topics = create_topic_ids(enr_fork_id.clone());
                 (Some(enr_fork_id.clone()), enr_fork_id.as_ssz_bytes())
@@ -258,20 +264,25 @@ impl Adapter {
             }
         };
         let client = Box::new(Client::new()) as Box<dyn Subscriber + Send>;
+        let (network_exit_signal, exit) = exit_future::signal();
+        let task_executor = TaskExecutor::new(
+            runtime.handle().clone(),
+            exit,
+            log.new(o!("Imp" => "TaskExecutor")),
+        );
         // instantiate mothra
-        let (network_globals, network_send, network_exit) =
-            Mothra::new(config, enr_fork_id_bytes, &executor, client, mothra_log).unwrap();
+        let (network_globals, network_send) = runtime.handle().block_on(async { Mothra::new(config, enr_fork_id_bytes, &task_executor, client, log.clone()) }).unwrap();
 
         Adapter {
             network_globals,
             network_send,
-            network_exit,
+            network_exit_signal,
             enr_fork_id,
             log,
         }
     }
 
     pub fn close(self) -> Result<(), ()> {
-        self.network_exit.send(())
+        self.network_exit_signal.fire()
     }
 }

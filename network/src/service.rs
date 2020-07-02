@@ -4,8 +4,8 @@ use p2p::{crawler, P2PAdapter};
 use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::path::PathBuf;
-use tokio_02::sync::watch;
-use tokio_02::{signal, task, time};
+use tokio::sync::watch;
+use tokio::{signal, task, time, runtime};
 use types::events::Events;
 
 pub struct Service {
@@ -17,7 +17,7 @@ pub struct Service {
 
 impl Service {
     pub fn new(
-        executor: &tokio_compat::runtime::TaskExecutor,
+        runtime: &runtime::Runtime,
         client_name: String,
         platform: String,
         p2p_protocol_version: String,
@@ -33,7 +33,7 @@ impl Service {
         let (p2p_adapter, crawler) = match run_mode {
             "node" => (
                 Some(P2PAdapter::new(
-                    &executor,
+                    &runtime,
                     client_name,
                     platform,
                     p2p_protocol_version,
