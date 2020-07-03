@@ -1,15 +1,12 @@
 use chrono::Local;
 use clap::ArgMatches;
-use csv;
 use eth2::ssz::{Decode, Encode};
 use eth2::types::{MainnetEthSpec, SignedBeaconBlock};
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
 use serde_derive::Serialize;
 use slog::{debug, info, o, trace, warn};
 use snap::raw::{decompress_len, Decoder, Encoder};
-use std::cell::Cell;
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
