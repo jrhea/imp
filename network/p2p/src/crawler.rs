@@ -13,11 +13,10 @@ use discv5_local::{
     enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
     Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
 };
-
 use eth2::ssz::{Decode, Encode};
 use eth2::utils::{
     get_attnets_from_enr, get_bitfield_from_enr, get_fork_id, get_fork_id_from_enr,
-    get_fork_id_from_string,EnrExt
+    get_fork_id_from_string, EnrExt,
 };
 use futures::future::Future;
 use futures::prelude::*;
@@ -263,8 +262,8 @@ impl Crawler {
 
         let config = Discv5ConfigBuilder::new()
             .request_timeout(Duration::from_secs(4))
-            .request_retries(1) //default 1
-            .enr_peer_update_min(5) // prevents NAT's should be raised for mainnet   //default 10
+            .request_retries(2) //default 1
+            .enr_peer_update_min(2) // prevents NAT's should be raised for mainnet   //default 10
             .query_parallelism(10) //default 3
             .query_peer_timeout(Duration::from_secs(2)) //default 2
             .query_timeout(Duration::from_secs(10)) //default 60
@@ -290,23 +289,42 @@ impl Crawler {
 
     pub async fn find_nodes(self, mut shutdown_rx: watch::Receiver<Events>, log: slog::Logger) {
         // construct the discv5 swarm, initializing an unused transport layer
-        let mut discv5 =
-            Discv5::new(self.local_enr, self.enr_key, self.config).unwrap();
+        let mut discv5 = Discv5::new(self.local_enr, self.enr_key, self.config).unwrap();
         // start the discv5 service
         discv5.start(self.socket_addr);
         // if we know of another peer's ENR, add it known peers
         for enr_str in self.boot_enr_list {
             let _ = match enr_str.parse::<Enr<CombinedKey>>() {
                 Ok(enr) => {
-                    trace!(log, "Added {} to list of bootstrap enrs", enr_str);
-                    info!(
-                        log,
-                        "Bootstrap ENR. ip: {:?}, udp_port {:?}, tcp_port: {:?}",
-                        enr.ip(),
-                        enr.udp(),
-                        enr.tcp()
+                    let multiaddr = format!(
+                        "/ip4/{}/tcp/{}/udp/{}/p2p/{}",
+                        enr.ip().unwrap(),
+                        enr.tcp().unwrap(),
+                        enr.udp().unwrap(),
+                        enr.peer_id()
                     );
-                    discv5.add_enr(enr)
+                    info!(log, "Multiaddr: {}", multiaddr);
+                    // search for the ENR
+                    match discv5.request_enr(multiaddr).await {
+                        Ok(Some(enr)) => {
+                            info!(
+                                log,
+                                "Bootstrap ENR. ip: {:?}, udp_port {:?}, tcp_port: {:?}",
+                                enr.ip(),
+                                enr.udp(),
+                                enr.tcp()
+                            );
+                            discv5.add_enr(enr)
+                        }
+                        Ok(None) => {
+                            println!("No ENR response");
+                            Ok(())
+                        }
+                        Err(e) => {
+                            println!("Error:{:?}", e);
+                            Ok(())
+                        }
+                    }
                 }
                 Err(_) => {
                     trace!(log, "Failed to add {} to list of bootstrap enrs", enr_str);
@@ -314,6 +332,12 @@ impl Crawler {
                 }
             };
         }
+
+        info!(
+            log,
+            "Num contactable bootstrap nodes: {}",
+            discv5.table_entries_enr().len()
+        );
 
         let output_file = match discv5.local_enr().udp() {
             Some(x) => format!("crawler{}.csv", x),
@@ -369,7 +393,10 @@ impl Crawler {
                     //let mut rng = rand::thread_rng();
                     //let rnum: f64 = rng.gen();
                     let rnum = 0.30;
-                    let enrs = if enr_added_count % 2 == 0 {
+                    let enrs =  if discv5.connected_peers() == 0 {
+                        info!(log,"calling find_node()");
+                        discv5.find_node(target_random_node_id).await
+                    } else if enr_added_count % 2 == 0 {
                         let node_ids_discovered: Vec<String> = enr_records.keys().cloned().collect();
                         let x = target_fork_digest.clone();
                         // predicate for finding nodes with a matching fork_digest
@@ -397,7 +424,6 @@ impl Crawler {
                         discv5.find_node(target_random_node_id).await
                     };
 
-
                     for enr in discv5.table_entries_enr() {
                         let enr_entry = EnrEntry::new(&enr);
                         if target_enr == "".to_string()
@@ -405,7 +431,7 @@ impl Crawler {
                         {
                             target_enr = enr.to_base64();
                         }
-                        let enr_record = enr_records.entry(enr_entry.node_id.clone()).or_default();
+                        let enr_record = enr_records.entry(enr_entry.node_id.clone()).or_default(); //None if new
                         *enr_record = EnrRecord::new(index, timestamp.clone(), enr_entry);
                         index += 1;
                         enr_added_count += 1;
@@ -436,11 +462,11 @@ impl Crawler {
                                         }
                                     }).count();
                                     info!(log, "Enr Entries on correct fork_digest: {:?}", num_on_fork);
-                                } 
+                                }
                             }
                             _ => ()
                         }
-                    } 
+                    }
                 }
             }
         }

@@ -1,21 +1,21 @@
 use chrono::Local;
 use clap::ArgMatches;
+use csv;
 use eth2::ssz::{Decode, Encode};
 use eth2::types::{MainnetEthSpec, SignedBeaconBlock};
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
 use serde_derive::Serialize;
 use slog::{debug, info, o, trace, warn};
 use snap::raw::{decompress_len, Decoder, Encoder};
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
-use types::events::Events;
 use tokio::sync::watch;
-use tokio::{signal, sync::mpsc, task, time, runtime};
-use std::fs::{File,OpenOptions};
-use std::cell::Cell;
-use csv;
+use tokio::{runtime, signal, sync::mpsc, task, time};
+use types::events::Events;
 
 #[cfg(not(feature = "local"))]
 use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor};
@@ -243,7 +243,7 @@ impl Adapter {
         let (enr_fork_id, enr_fork_id_bytes) = match get_fork_id_from_string(boot_nodes[0].clone())
         {
             Some(enr_fork_id) => {
-                info!(log,"Fork-Digest: {}",hex::encode(enr_fork_id.fork_digest));
+                info!(log, "Fork-Digest: {}", hex::encode(enr_fork_id.fork_digest));
                 // configure gossip topics
                 config.network_config.topics = create_topic_ids(enr_fork_id.clone());
                 (Some(enr_fork_id.clone()), enr_fork_id.as_ssz_bytes())
@@ -268,7 +268,18 @@ impl Adapter {
             log.new(o!("Imp" => "TaskExecutor")),
         );
         // instantiate mothra
-        let (network_globals, network_send) = runtime.handle().block_on(async { Mothra::new(config, enr_fork_id_bytes, &task_executor, client, log.clone()) }).unwrap();
+        let (network_globals, network_send) = runtime
+            .handle()
+            .block_on(async {
+                Mothra::new(
+                    config,
+                    enr_fork_id_bytes,
+                    &task_executor,
+                    client,
+                    log.clone(),
+                )
+            })
+            .unwrap();
 
         Adapter {
             network_globals,
