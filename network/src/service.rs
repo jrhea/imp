@@ -5,7 +5,7 @@ use slog::{debug, info, o, trace, warn};
 use std::any::type_name;
 use std::path::PathBuf;
 use tokio::sync::watch;
-use tokio::{signal, task, time, runtime};
+use tokio::{runtime, signal, task, time};
 use types::events::Events;
 
 pub struct Service {
@@ -69,12 +69,14 @@ impl Service {
             if let "crawler" = run_mode.as_str() {
                 task::spawn(async move {
                     let _ = match crawler {
-                        Some(crawler) => crawler
+                        Some(crawler) => {
+                            crawler
                                 .find_nodes(
                                     crawler_shutdown_rx,
                                     crawler_log.new(o!("Network Service" => "Crawler")),
                                 )
-                                .await,
+                                .await
+                        }
                         None => (),
                     };
                 });

@@ -5,11 +5,11 @@ use crate::ssz::types::BitVector;
 use crate::ssz::{Decode, Encode};
 use crate::testnet::config::Eth2TestnetConfig;
 use crate::types::{ChainSpec, EnrForkId, EthSpec, Hash256, MainnetEthSpec, Slot};
-use libp2p_core::{identity::Keypair, identity::PublicKey, multiaddr::Protocol, Multiaddr, PeerId};
 #[cfg(not(feature = "local"))]
 use discv5::enr::{CombinedKey, CombinedPublicKey, Enr};
 #[cfg(feature = "local")]
 use discv5_local::enr::{CombinedKey, CombinedPublicKey, Enr};
+use libp2p_core::{identity::Keypair, identity::PublicKey, multiaddr::Protocol, Multiaddr, PeerId};
 
 use std::path::PathBuf;
 
@@ -133,10 +133,9 @@ pub fn get_gossip_topic_id(kind: GossipKind, enr_fork_id: EnrForkId) -> String {
     GossipTopic::new(kind, GossipEncoding::default(), enr_fork_id.fork_digest).into()
 }
 
-
 ///
 /// The following code was "borrowed from "https://github.com/AgeManning/enr-cli/blob/master/src/enr_ext.rs"
-/// 
+///
 
 /// Extend ENR for libp2p types.
 pub trait EnrExt {

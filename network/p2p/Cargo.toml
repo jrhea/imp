@@ -9,8 +9,8 @@ default = ["mothra","discv5"]
 local = ["mothra_local","discv5_local"]
 
 [dependencies]
-discv5 = { version = "0.1.0-alpha.5", optional = true }
-discv5_local = { path = "../../../discv5", package="discv5", optional = true }
+discv5 = { version = "0.1.0-alpha.5", features=["libp2p"], optional = true }
+discv5_local = { path = "../../../discv5", features=["libp2p"], package="discv5", optional = true }
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
