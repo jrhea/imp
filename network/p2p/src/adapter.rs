@@ -2,7 +2,8 @@ use chrono::Local;
 use clap::ArgMatches;
 use csv;
 use eth2::ssz::{Decode, Encode};
-use eth2::types::{MainnetEthSpec, SignedBeaconBlock};
+use eth2::types::{MainnetEthSpec, SignedBeaconBlock, Hash256, Slot, Epoch, EnrForkId};
+use eth2::libp2p::{rpc, PeerId};
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
 use serde_derive::Serialize;
 use slog::{debug, info, o, trace, warn};
@@ -18,9 +19,9 @@ use tokio::{runtime, signal, sync::mpsc, task, time};
 use types::events::Events;
 
 #[cfg(not(feature = "local"))]
-use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor};
+use mothra::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor, rpc::RequestId,  Request, Response, MothraPeerId};
 #[cfg(feature = "local")]
-use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor};
+use mothra_local::{Mothra, NetworkGlobals, NetworkMessage, Subscriber, TaskExecutor, rpc::RequestId, Request, Response, MothraPeerId};
 
 #[derive(Serialize, Default, Clone)]
 struct GossipRecord {
@@ -80,12 +81,16 @@ impl GossipRecord {
 
 struct Client {
     num_records: Cell<u64>,
+    network_send: Option<mpsc::UnboundedSender<NetworkMessage>>,
+    fork_digest: Option<[u8; 4]>
 }
 
 impl Client {
     pub fn new() -> Self {
         Client {
             num_records: Cell::new(0),
+            network_send: None,
+            fork_digest: None
         }
     }
 
@@ -133,6 +138,11 @@ fn pad_millis(millis: u32) -> Option<String> {
 }
 
 impl Subscriber for Client {
+    fn init(&mut self, network_send: mpsc::UnboundedSender<NetworkMessage>, fork_id: Vec<u8>) {
+        self.network_send = Some(network_send);
+        self.fork_digest = Some(EnrForkId::from_ssz_bytes(&fork_id).unwrap().fork_digest);
+    }
+
     fn discovered_peer(&self, peer: String) {
         println!("Rust: discovered peer");
         println!("peer={:?}", peer);
@@ -174,6 +184,47 @@ impl Subscriber for Client {
         println!("req_resp={:?}", req_resp);
         println!("peer={:?}", peer);
         println!("data={:?}", String::from_utf8_lossy(&data));
+
+        let message = rpc::methods::StatusMessage{
+            fork_digest: self.fork_digest.unwrap(),
+            finalized_root: Hash256::zero(),
+            finalized_epoch: Epoch::new(0),
+            head_root: Hash256::zero(),
+            head_slot: Slot::new(0)
+        };
+
+        let message_bytes = message.as_ssz_bytes();
+
+        if req_resp == 0 {
+            let request_id: RequestId = RequestId::Behaviour;
+            let request: Request = Request::Status(message_bytes);
+            let bytes = bs58::decode(peer.as_str()).into_vec().unwrap();
+            let peer_id = MothraPeerId::from_bytes(bytes).map_err(|_| ()).unwrap();
+            self.network_send
+                .as_ref()
+                .unwrap()
+                .send(NetworkMessage::SendRequest {
+                    peer_id,
+                    request,
+                    request_id
+                })
+                .unwrap_or_else(|_| println!("Could not send RPC request to the network service"));
+        } else {
+            let index = data[0];
+            let response: Response = Response::Status(message_bytes);
+            let bytes = bs58::decode(peer.as_str()).into_vec().unwrap();
+            let peer_id = MothraPeerId::from_bytes(bytes).map_err(|_| ()).unwrap();
+            self.network_send
+                .as_ref()
+                .unwrap()
+                .send(NetworkMessage::SendResponse {
+                    peer_id,
+                    response,
+                    index
+                })
+                .unwrap_or_else(|_| println!("Could not send RPC request to the network service"));
+        }
+        
     }
 }
 
@@ -260,13 +311,22 @@ impl Adapter {
                 }
             }
         };
-        let client = Box::new(Client::new()) as Box<dyn Subscriber + Send>;
+        let mut client = Box::new(Client::new()) as Box<dyn Subscriber + Send>;
         let (network_exit_signal, exit) = exit_future::signal();
         let task_executor = TaskExecutor::new(
             runtime.handle().clone(),
             exit,
             log.new(o!("Imp" => "TaskExecutor")),
         );
+        let meta_data = rpc::methods::MetaData::<MainnetEthSpec>{
+            seq_number: 1,
+            attnets: eth2::libp2p::types::EnrBitfield::<MainnetEthSpec>::default()
+        };
+        let meta_data_bytes = meta_data.as_ssz_bytes();
+        let ping_data = rpc::methods::Ping{
+            data: 1,
+        };
+        let ping_data_bytes = ping_data.as_ssz_bytes();
         // instantiate mothra
         let (network_globals, network_send) = runtime
             .handle()
@@ -274,6 +334,8 @@ impl Adapter {
                 Mothra::new(
                     config,
                     enr_fork_id_bytes,
+                    meta_data_bytes,
+                    ping_data_bytes,
                     &task_executor,
                     client,
                     log.clone(),

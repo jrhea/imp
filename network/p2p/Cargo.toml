@@ -31,6 +31,7 @@ chrono = "0.4.11"
 dirs = "2.0.2"
 rand = "0.7.3"
 snap = "1.0.0"
+bs58 = "0.2.0"
 
 [dependencies.libp2p]
 git = "https://github.com/sigp/rust-libp2p"
