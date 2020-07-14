@@ -11,4 +11,4 @@ rust:
 jobs:
   fast_finish: true
   install:
-    -rustup component add rustfmt
+    - rustup component add rustfmt
