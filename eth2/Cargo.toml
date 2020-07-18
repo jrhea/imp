@@ -27,3 +27,4 @@ eth2_config =  { version = "0.2.0",  package = "eth2_config", optional = true }
 eth2_config_local =  { path = "../../lighthouse/eth2/utils/eth2_config", package = "eth2_config", optional = true }
 eth2_testnet_config =  { version = "0.2.0", package = "eth2_testnet_config", optional = true }
 eth2_testnet_config_local =  { path = "../../lighthouse/eth2/utils/eth2_testnet_config", package = "eth2_testnet_config", optional = true }
+

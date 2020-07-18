@@ -43,7 +43,7 @@ elif [ $NETWORK = "topaz" ]; then
     BOOTSTRAP_BOOTNODES=-Ku4QAGwOT9StqmwI5LHaIymIO4ooFKfNkEjWa0f1P8OsElgBh2Ijb-GrD_-b9W4kcPFcwmHQEy5RncqXNqdpVo1heoBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpAAAAAAAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A
 elif [ $NETWORK = "altona" ]; then
     FORK_DIGEST=fdca39b0
-    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/goerli/altona/master/altona/bootnodes.txt | grep "enr:" | sed -e "s/^enr://" | tr "\n" "," |sed -e "s/,$//g")
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/altona/bootstrap_nodes.txt | grep "enr:" | sed -e "s/^enr://" | tr "\n" "," |sed -e "s/,$//g")
 else
     echo network $NETWORK "not supported"
     exit 1
