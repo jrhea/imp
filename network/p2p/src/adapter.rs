@@ -28,6 +28,8 @@ struct GossipRecord {
     index: u64,
     timestamp: String,
     message_id: String,
+    sequence_number: u64,
+    agent_string: String,
     peer_id: String,
     topic: String,
     message_size: usize,
@@ -40,6 +42,8 @@ impl GossipRecord {
         index: u64,
         timestamp: String,
         message_id: String,
+        sequence_number: u64,
+        agent_string: String,
         peer_id: String,
         topic: String,
         data: Vec<u8>,
@@ -68,6 +72,8 @@ impl GossipRecord {
                 index,
                 timestamp,
                 message_id,
+                sequence_number,
+                agent_string,
                 peer_id,
                 topic,
                 message_size: data.len(),
@@ -148,7 +154,7 @@ impl Subscriber for Client {
         println!("peer={:?}", peer);
     }
 
-    fn receive_gossip(&self, message_id: String, peer_id: String, topic: String, data: Vec<u8>) {
+    fn receive_gossip(&self, message_id: String, sequence_number: u64, agent_string: String, peer_id: String, topic: String, data: Vec<u8>) {
         if topic.contains("beacon_block") {
             let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
                 Ok(n) => format!(
@@ -162,6 +168,8 @@ impl Subscriber for Client {
                 self.num_records.get(),
                 timestamp.clone(),
                 message_id.clone(),
+                sequence_number,
+                agent_string.clone(),
                 peer_id.clone(),
                 topic.clone(),
                 data,
@@ -169,9 +177,8 @@ impl Subscriber for Client {
                 Ok(record) => {
                     self.write_file(record);
                     self.num_records.set(self.num_records.get() + 1);
-                    println!("Rust: received gossip at {}", timestamp);
-                    println!("message id={:?}", message_id);
-                    println!("peer id={:?}\n", peer_id);
+                    println!("Received gossip message-id={} at {:?}",message_id, timestamp);
+                    println!("peer id={:?}, agent-string:{:?}\n", peer_id, agent_string);
                 }
                 Err(e) => println!("Error:{}", e),
             }
@@ -179,11 +186,11 @@ impl Subscriber for Client {
     }
 
     fn receive_rpc(&self, method: String, req_resp: u8, peer: String, data: Vec<u8>) {
-        println!("Rust: received rpc");
+        /*println!("Rust: received rpc");
         println!("method={:?}", method);
         println!("req_resp={:?}", req_resp);
         println!("peer={:?}", peer);
-        println!("data={:?}", String::from_utf8_lossy(&data));
+        println!("data={:?}", String::from_utf8_lossy(&data));*/
 
         let message = rpc::methods::StatusMessage{
             fork_digest: self.fork_digest.unwrap(),
@@ -281,11 +288,13 @@ impl Adapter {
             &mothra_arg_matches,
         );
         config.network_config.max_peers = 1000;
-        config.network_config.propagation_percentage = Some(0);
+        //config.network_config.gs_config.manual_propagation = true;
         config.network_config.gs_config.mesh_n_high = 76;
         config.network_config.gs_config.mesh_n_low = 25;
         config.network_config.gs_config.mesh_n = 50;
-        config.network_config.gs_config.gossip_lazy = 0;
+        //config.network_config.gs_config.gossip_lazy = 0;
+        //config.network_config.gs_config.history_length = 1;
+        //config.network_config.gs_config.history_gossip = 1;
 
         // TODO
         // Option: Learn fork_id from supplied cli arg directly

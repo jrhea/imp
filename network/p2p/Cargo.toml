@@ -34,7 +34,7 @@ snap = "1.0.0"
 bs58 = "0.2.0"
 
 [dependencies.libp2p]
-git = "https://github.com/sigp/rust-libp2p"
-rev = "a6232506278b9e686248f8d04b79400861b143c2"
+git = "https://github.com/jrhea/rust-libp2p"
+rev = "5e18a394a375686744dcd57b59fed60359cc0da1"
 default-features = false
 features = ["websocket", "identify", "mplex", "yamux", "noise", "gossipsub", "dns", "secio", "tcp-tokio"] 

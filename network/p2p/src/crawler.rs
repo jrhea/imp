@@ -297,22 +297,21 @@ impl Crawler {
             let _ = match enr_str.parse::<Enr<CombinedKey>>() {
                 Ok(enr) => {
                     let multiaddr = format!(
-                        "/ip4/{}/tcp/{}/udp/{}/p2p/{}",
+                        "/ip4/{}/udp/{}/p2p/{}",
                         enr.ip().unwrap(),
-                        enr.tcp().unwrap(),
                         enr.udp().unwrap(),
                         enr.peer_id()
                     );
                     info!(log, "Multiaddr: {}", multiaddr);
+                    discv5.add_enr(enr)
                     // search for the ENR
-                    match discv5.request_enr(multiaddr).await {
+                   /* match discv5.request_enr(multiaddr).await {
                         Ok(Some(enr)) => {
                             info!(
                                 log,
-                                "Bootstrap ENR. ip: {:?}, udp_port {:?}, tcp_port: {:?}",
+                                "Bootstrap ENR. ip: {:?}, udp_port {:?}",
                                 enr.ip(),
                                 enr.udp(),
-                                enr.tcp()
                             );
                             discv5.add_enr(enr)
                         }
@@ -324,7 +323,7 @@ impl Crawler {
                             println!("Error:{:?}", e);
                             Ok(())
                         }
-                    }
+                    }*/
                 }
                 Err(_) => {
                     trace!(log, "Failed to add {} to list of bootstrap enrs", enr_str);
