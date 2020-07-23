@@ -5,12 +5,11 @@ authors = ["jonny rhea <jonny.rhea@consensys.com>"]
 edition = "2018"
 
 [features]
-default = ["mothra","discv5"]
-local = ["mothra_local","discv5_local"]
+default = ["mothra"]
+local = ["mothra_local"]
 
 [dependencies]
-discv5 = { version = "0.1.0-alpha.5", features=["libp2p"], optional = true }
-discv5_local = { path = "../../../discv5", features=["libp2p"], package="discv5", optional = true }
+discv5 = { version = "0.1.0-alpha.5", features=["libp2p"] }
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
@@ -32,9 +31,3 @@ dirs = "2.0.2"
 rand = "0.7.3"
 snap = "1.0.0"
 bs58 = "0.2.0"
-
-[dependencies.libp2p]
-git = "https://github.com/jrhea/rust-libp2p"
-rev = "5e18a394a375686744dcd57b59fed60359cc0da1"
-default-features = false
-features = ["websocket", "identify", "mplex", "yamux", "noise", "gossipsub", "dns", "secio", "tcp-tokio"] 

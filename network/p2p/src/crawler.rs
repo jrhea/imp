@@ -3,16 +3,12 @@ use csv;
 use serde_derive::{Serialize};
 use chrono::Local;
 use clap::{App, AppSettings, Arg, ArgMatches};
-#[cfg(not(feature = "local"))]
+
 use discv5::{
     enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
     Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
 };
-#[cfg(feature = "local")]
-use discv5_local::{
-    enr::{CombinedKey, Enr, EnrBuilder, EnrError, NodeId},
-    Discv5, Discv5Config, Discv5ConfigBuilder, Discv5Event,
-};
+
 use eth2::ssz::{Decode, Encode};
 use eth2::utils::{
     get_attnets_from_enr, get_bitfield_from_enr, get_fork_id, get_fork_id_from_enr,
@@ -305,7 +301,7 @@ impl Crawler {
                     info!(log, "Multiaddr: {}", multiaddr);
                     discv5.add_enr(enr)
                     // search for the ENR
-                   /* match discv5.request_enr(multiaddr).await {
+                    /*match discv5.request_enr(multiaddr).await {
                         Ok(Some(enr)) => {
                             info!(
                                 log,
@@ -391,7 +387,6 @@ impl Crawler {
 
                     //let mut rng = rand::thread_rng();
                     //let rnum: f64 = rng.gen();
-                    let rnum = 0.30;
                     let enrs =  if discv5.connected_peers() == 0 {
                         info!(log,"calling find_node()");
                         discv5.find_node(target_random_node_id).await
