@@ -43,9 +43,10 @@ touch:
 	cargo update -p eth2_ssz_types
 	cargo update -p types
 	cargo update -p eth2_hashing
-	cargo update -p eth2-libp2p
+	cargo update -p eth2_libp2p
 	cargo update -p eth2_config
 	cargo update -p eth2_testnet_config
+
 
 fmt:
 	cargo fmt

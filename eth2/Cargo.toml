@@ -10,21 +10,20 @@ local = ["discv5_local", "eth2_libp2p_local", "eth2_types_local","eth2_config_lo
 
 [dependencies]
 dirs = "2.0.2"
-libp2p-core = "0.19.1"
+libp2p-core = { version = "0.20.0" }
 discv5 = { version = "0.1.0-alpha.5", optional = true }
-discv5_local = { path = "../../../discv5", package="discv5", optional = true }
-eth2_libp2p = { version = "0.1.2", package = "eth2-libp2p", optional = true }
-eth2_libp2p_local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2-libp2p", optional = true }
+discv5_local = { path = "../../discv5", package="discv5", optional = true }
+eth2_libp2p = { version = "0.1.2", package = "eth2_libp2p", optional = true }
+eth2_libp2p_local = { path = "../../lighthouse/beacon_node/eth2-libp2p", package = "eth2_libp2p", optional = true }
 eth2_types =  { version = "0.2.0",  package = "types", optional = true }
-eth2_types_local =  { path = "../../lighthouse/eth2/types", package = "types", optional = true }
+eth2_types_local =  { path = "../../lighthouse/consensus/types", package = "types", optional = true }
 eth2_ssz =  { version = "0.1.2",  package = "eth2_ssz", optional = true }
-eth2_ssz_local =  { path = "../../lighthouse/eth2/utils/ssz", package = "eth2_ssz", optional = true }
+eth2_ssz_local =  { path = "../../lighthouse/consensus/ssz", package = "eth2_ssz", optional = true }
 eth2_ssz_derive =  { version = "0.1.0",  package = "eth2_ssz_derive", optional = true }
-eth2_ssz_derive_local =  { path = "../../lighthouse/eth2/utils/ssz_derive", package = "eth2_ssz_derive", optional = true }
+eth2_ssz_derive_local =  { path = "../../lighthouse/consensus/ssz_derive", package = "eth2_ssz_derive", optional = true }
 eth2_ssz_types =  { version = "0.2.0",  package = "eth2_ssz_types", optional = true }
-eth2_ssz_types_local =  { path = "../../lighthouse/eth2/utils/ssz_types", package = "eth2_ssz_types", optional = true }
+eth2_ssz_types_local =  { path = "../../lighthouse/consensus/ssz_types", package = "eth2_ssz_types", optional = true }
 eth2_config =  { version = "0.2.0",  package = "eth2_config", optional = true }
-eth2_config_local =  { path = "../../lighthouse/eth2/utils/eth2_config", package = "eth2_config", optional = true }
+eth2_config_local =  { path = "../../lighthouse/common/eth2_config", package = "eth2_config", optional = true }
 eth2_testnet_config =  { version = "0.2.0", package = "eth2_testnet_config", optional = true }
-eth2_testnet_config_local =  { path = "../../lighthouse/eth2/utils/eth2_testnet_config", package = "eth2_testnet_config", optional = true }
-
+eth2_testnet_config_local =  { path = "../../lighthouse/common/eth2_testnet_config", package = "eth2_testnet_config", optional = true }

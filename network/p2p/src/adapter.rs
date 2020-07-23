@@ -2,7 +2,7 @@ use chrono::Local;
 use clap::ArgMatches;
 use csv;
 use eth2::ssz::{Decode, Encode};
-use eth2::types::{MainnetEthSpec, SignedBeaconBlock, Hash256, Slot, Epoch, EnrForkId};
+use eth2::types::{MainnetEthSpec, SignedBeaconBlock, SignedAggregateAndProof, Hash256, Slot, Epoch, EnrForkId};
 use eth2::libp2p::{rpc, PeerId};
 use eth2::utils::{create_topic_ids, get_fork_id_from_dir, get_fork_id_from_string};
 use serde_derive::Serialize;
@@ -34,7 +34,7 @@ struct GossipRecord {
     topic: String,
     message_size: usize,
     slot: u64,
-    proposer_index: u64,
+    validator_index: u64,
 }
 //SignedBeaconBlock
 impl GossipRecord {
@@ -67,20 +67,38 @@ impl GossipRecord {
             }
             Err(e) => return Err(format!("{}", e)),
         };
-        match SignedBeaconBlock::<MainnetEthSpec>::from_ssz_bytes(&data) {
-            Ok(decoded_data) => Ok(GossipRecord {
-                index,
-                timestamp,
-                message_id,
-                sequence_number,
-                agent_string,
-                peer_id,
-                topic,
-                message_size: data.len(),
-                slot: decoded_data.message.slot.into(),
-                proposer_index: decoded_data.message.proposer_index,
-            }),
-            Err(e) => return Err(format!("{:#?}", e)),
+        if topic.contains("beacon_block") {
+            match SignedBeaconBlock::<MainnetEthSpec>::from_ssz_bytes(&data) {
+                Ok(decoded_data) => Ok(GossipRecord {
+                    index,
+                    timestamp,
+                    message_id,
+                    sequence_number,
+                    agent_string,
+                    peer_id,
+                    topic,
+                    message_size: data.len(),
+                    slot: decoded_data.message.slot.into(),
+                    validator_index: decoded_data.message.proposer_index,
+                }),
+                Err(e) => return Err(format!("{:#?}", e)),
+            }
+        } else {
+            match SignedAggregateAndProof::<MainnetEthSpec>::from_ssz_bytes(&data) {
+                Ok(decoded_data) => Ok(GossipRecord {
+                    index,
+                    timestamp,
+                    message_id,
+                    sequence_number,
+                    agent_string,
+                    peer_id,
+                    topic,
+                    message_size: data.len(),
+                    slot: decoded_data.message.aggregate.data.slot.into(),
+                    validator_index: decoded_data.message.aggregator_index,
+                }),
+                Err(e) => return Err(format!("{:#?}", e)),
+            }
         }
     }
 }
@@ -155,7 +173,7 @@ impl Subscriber for Client {
     }
 
     fn receive_gossip(&self, message_id: String, sequence_number: u64, agent_string: String, peer_id: String, topic: String, data: Vec<u8>) {
-        if topic.contains("beacon_block") {
+        if topic.contains("beacon_block") || topic.contains("beacon_aggregate_and_proof") {
             let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
                 Ok(n) => format!(
                     "{}.{}",

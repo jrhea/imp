@@ -10,7 +10,7 @@ include = [
 
 [features]
 default = []
-#local = ["p2p/local"]
+local = ["p2p/local"]
 
 
 [dependencies]
@@ -31,14 +31,14 @@ dirs = "2.0.2"
 
 
 [patch.crates-io]
- discv5 =  { git = "https://github.com/jrhea/discv5.git", rev = "c5e6ec5b288fff23c66c5ed3d72ec58da0258b7e" }
- tree_hash = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "tree_hash" }
- tree_hash_derive = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "tree_hash_derive" }
- eth2_ssz = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_ssz" }
- eth2_ssz_derive = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_ssz_derive" }
- eth2_ssz_types = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_ssz_types" }
- eth2_types = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "types" }
- eth2_hashing = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_hashing" }
- eth2_libp2p = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2-libp2p" }
- eth2_config = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_config" }
- eth2_testnet_config = { git = "https://github.com/jrhea/lighthouse", branch = "prkl", package = "eth2_testnet_config" }                                                                                                                                
+discv5 = { git = "https://github.com/jrhea/discv5.git", rev = "37b87f6cc53c8fc695d9b0afc141634916a3a201", features = ["libp2p"] }
+tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "tree_hash" }
+tree_hash_derive = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "tree_hash_derive" }
+eth2_ssz = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_ssz" }
+eth2_ssz_derive = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_ssz_derive" }
+eth2_ssz_types = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_ssz_types" }
+eth2_types = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "types" }
+eth2_hashing = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_hashing" }
+eth2_libp2p = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_libp2p" }
+eth2_config = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_config" }
+eth2_testnet_config = { git = "https://github.com/sigp/lighthouse", rev = "5a088b195c298e8aea9bb10994715a0f124f37c9", package = "eth2_testnet_config" }                                                                                                                             
