@@ -9,7 +9,7 @@ default = ["mothra"]
 local = ["mothra_local"]
 
 [dependencies]
-discv5 = { version = "0.1.0-alpha.5", features=["libp2p"] }
+discv5 = { git = "https://github.com/jrhea/discv5.git", rev = "37b87f6cc53c8fc695d9b0afc141634916a3a201", features = ["libp2p"] }
 eth2 = { path = "../../eth2", package="imp-eth2"}
 types = { path = "../../types", package="imp-types"}
 utils = { path = "../../utils", package="imp-utils"}
