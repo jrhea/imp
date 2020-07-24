@@ -1,1 +1,1 @@
-./../../clients/prysm/prysm.sh beacon-chain --verbosity debug --no-discovery --interop-eth1data-votes --interop-num-validators 64
+./../../clients/prysm/prysm.sh beacon-chain --verbosity info --disable-discv5 --interop-eth1data-votes --interop-genesis-time $(date +%s) --interop-num-validators 64 --rpc-host $(ipconfig getifaddr en0)
