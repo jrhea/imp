@@ -47,17 +47,18 @@ elif [ $NETWORK = "altona" ]; then
 elif [ $NETWORK = "onyx" ]; then
     FORK_DIGEST=a65b4897
     BOOTSTRAP_BOOTNODES=-LK4QNtJfsgcW7OsSWmx0viM1EfhtteFr_AEmQbKBDiO731DWFhpckZmCD0lX_QKwIO5HkkUcxhQ_8PSG1SsoLQIEJEeh2F0dG5ldHOIYAICAAAAAASEZXRoMpCmW0iXAAAAAP__________gmlkgnY0gmlwhEj8IuqJc2VjcDI1NmsxoQKMxUzwsbHy_0xq0jK8PCc3zKudGv2N0EE9B7f0ObbJ4oN0Y3CCMsiDdWRwgi7g,-LS4QHj0e2Kw5z8Ha-GtNbaxdHd7FieB0ER3sm0L59AwGQt4TBZPNnOEN-78a5S5JJWl3xTta0dwfQR37zKC_-je_8CCBbqHYXR0bmV0c4gGKFAAQKREFYRldGgykKZbSJcAAAAA__________-CaWSCdjSCaXCEfEdtC4lzZWNwMjU2azGhAlRtklD9MhHYWowLMGQX1bkvFRVhlXWQAXlAoXaISma2g3RjcIIyyIN1ZHCCLuA,-LK4QHt4MMEQRHBWHAG1PmkremYEaWi0L1GzzZTL9eEza1L-G5gBJlow92B5GVzEJeAxMw6kbFxRJTdYTwh3xvZCoVNwh2F0dG5ldHOIAEEUGAADECCEZXRoMpD9yjmwAAABIf__________gmlkgnY0gmlwhFNVv3SJc2VjcDI1NmsxoQP23W3m9AVsrd68UEhKL5Bwpkq47fDDOVgDoAfc3zM60YN0Y3CCIyiDdWRwgiMo
+elif [ $NETWORK = "medalla" ]; then
+    FORK_DIGEST=e7a75d5a
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/goerli/medalla/master/medalla/bootnodes.txt | grep "enr:" | sed -e "s/^enr:/,/" | tr -d "\n" | tr -d "\r" |sed -e "s/^,//g")
 elif [ $NETWORK = "prysm-attack" ]; then
     FORK_DIGEST=c354a54a
     BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/prysm-attack-0/lighthouse-tesnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
 elif [ $NETWORK = "lighthouse-attack" ]; then
     FORK_DIGEST=80e1769b
     BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/lighthouse-attack-0/lighthouse-testnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
-    #BOOTSTRAP_BOOTNODES=-LK4QFMsjqTjQnQnhTxEICGfLl_pUMJ1WsRHlL9W0oQLA7D8VT9KLiocAXeIrwooYA4dRjbUJ20ojpj74B7Bvy89ruYhh2F0dG5ldHOIje-SjBKqarqEZXRoMpCA4XabAAAAAP__________gmlkgnY0gmlwhAPs8RyJc2VjcDI1NmsxoQLNBA7s1IpcojJA27Pa8qR4jdFHCjBHuuJjiSSZZzNgLYN0Y3CCIyiDdWRwgiMo
 elif [ $NETWORK = "teku-attack" ]; then
     FORK_DIGEST=157d3034
     BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/teku-attack-0/lighthouse-testnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
-    #BOOTSTRAP_BOOTNODES=-KG4QLbHkqa5d6Ap0bBEuLUazyWPVbdVsZ_Py-9zFH0Uh9NMS9V-gzEvRzyMV0kPv1vsQafu1hZu8c3jDEdxn0INEnwDhGV0aDKQFX0wNAAAAAD__________4JpZIJ2NIJpcIQNciWwiXNlY3AyNTZrMaEC398ggkQb5G2M8QuLva2CCMqe9mFGQyb0SEM6_MDiGdiDdGNwgiMog3VkcIIjKA
 else
     echo network $NETWORK "not supported"
     exit 1
