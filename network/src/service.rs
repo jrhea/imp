@@ -22,6 +22,7 @@ impl Service {
         platform: String,
         p2p_protocol_version: String,
         testnet_dir: Option<PathBuf>,
+        mut enrs: Vec<String>,
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
@@ -38,6 +39,7 @@ impl Service {
                     platform,
                     p2p_protocol_version,
                     testnet_dir,
+                    enrs,
                     &arg_matches,
                     log.new(o!("NetworkService" => "P2PAdapter")),
                 )),
@@ -45,7 +47,7 @@ impl Service {
             ),
             "crawler" => {
                 let crawler =
-                    Crawler::new(arg_matches, log.new(o!("Network Service" => "Crawler")));
+                    Crawler::new(arg_matches, enrs, log.new(o!("Network Service" => "Crawler")));
                 (None, Some(crawler))
             }
             _ => (None, None),

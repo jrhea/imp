@@ -170,7 +170,7 @@ pub struct Crawler {
 }
 
 impl Crawler {
-    pub fn new(arg_matches: &ArgMatches<'_>, log: slog::Logger) -> Self {
+    pub fn new(arg_matches: &ArgMatches<'_>, mut enrs: Vec<String>, log: slog::Logger) -> Self {
         // get mothra subcommand args matches
         let crawler_arg_matches = &arg_matches.subcommand_matches("crawler").unwrap();
 
@@ -204,7 +204,7 @@ impl Crawler {
             .value_of("fork-digest")
             .expect("required parameter");
 
-        let boot_enr_list = if crawler_arg_matches.is_present("boot-nodes") {
+        let mut boot_enr_list = if crawler_arg_matches.is_present("boot-nodes") {
             crawler_arg_matches
                 .value_of("boot-nodes")
                 .unwrap()
@@ -215,6 +215,7 @@ impl Crawler {
         } else {
             Default::default()
         };
+        boot_enr_list.append(&mut enrs);
         info!(log, "Found {} bootstrap enrs", boot_enr_list.len());
 
         // build the local ENR

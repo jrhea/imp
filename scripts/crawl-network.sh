@@ -12,9 +12,12 @@ function post_process() {
         # group by node-id, seq_no, taking the highest seq no in each group and saving the enr
         if [ -z "$FORK_DIGEST" ]; then
             tail -n+2 $DATA_DIR/crawler* | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+            cat $DATA_DIR/enrs.txt | tr "\n" "," | sed -e "s/,$//g" > $DATA_DIR/enrs.csv
         else
             tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' |  cut -d',' -f3,14,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f3 |sed -e "s/^enr://" > $DATA_DIR/enrs.txt
+            cat $DATA_DIR/enrs.txt | tr "\n" "," | sed -e "s/,$//g" > $DATA_DIR/enrs.csv
             tail -n+2 $DATA_DIR/crawler* | grep $FORK_DIGEST | sed 's/\".*\"//g' | grep -v "\[\]"|  cut -d',' -f3,14,15,16 | sort -t ',' -k1,1 -k2,2nr -s -u | sort -t ',' -u -k1,1| cut -d',' -f4 | sed -e "s/^enr://" > $DATA_DIR/validating_enrs.txt
+             cat $DATA_DIR/validating_enrs.txt | tr "\n" "," | sed -e "s/,$//g" > $DATA_DIR/validating_enrs.csv
         fi
         echo "Post processing complete"
         echo "exit"
@@ -79,15 +82,9 @@ fi
 mkdir -p $DATA_DIR
 mkdir -p $BACKUP_DIR
 
-FILE_BOOTNODES=
+
 BOOTNODES=
-if [ -f $DATA_DIR/enrs.txt ]; then 
-    echo "Additional bootnodes found in file"
-    FILE_BOOTNODES=$(cat $DATA_DIR/enrs.txt | tr "\n" "," | sed -e "s/,$//g")
-    BOOTNODES=$BOOTSTRAP_BOOTNODES,$FILE_BOOTNODES
-else
-    BOOTNODES=$BOOTSTRAP_BOOTNODES
-fi
+BOOTNODES=$BOOTSTRAP_BOOTNODES
 
 if [ "$OUTPUT_MODE" != "none" ]; then
     echo "Backing up $DATA_DIR to $BACKUP_DIR"
@@ -97,7 +94,13 @@ fi
 PORT=12000
 for i in $(seq 1 $NUM_CRAWLERS); do
     echo cat $DATA_DIR/crawler$PORT.csv
-    RUST_LOG=libp2p_discv5=debug ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level trace crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --fork-digest "$FORK_DIGEST" --boot-nodes $BOOTNODES &
+    if [ -f $DATA_DIR/enrs.csv ]; then 
+        echo "Additional bootnodes found in file"
+        RUST_LOG=libp2p_discv5=debug ./../target/debug/imp --p2p-protocol-version imp/libp2p --enr-file $DATA_DIR/enrs.csv --debug-level trace crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --fork-digest "$FORK_DIGEST" --boot-nodes $BOOTNODES &
+    else
+        RUST_LOG=libp2p_discv5=debug ./../target/debug/imp --p2p-protocol-version imp/libp2p --debug-level trace crawler --output-mode $OUTPUT_MODE --datadir $DATA_DIR --listen-address $IP_ADDRESS --port $PORT --fork-digest "$FORK_DIGEST" --boot-nodes $BOOTNODES &
+    fi
+    
     let PORT++;
 done
 

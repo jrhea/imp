@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
 use std::sync::Arc;
+use dirs;
 use std::time::SystemTime;
 use tokio::sync::watch;
 use tokio::{runtime, signal, sync::mpsc, task, time};
@@ -104,6 +105,7 @@ impl GossipRecord {
 }
 
 struct Client {
+    output_dir: String,
     num_records: Cell<u64>,
     network_send: Option<mpsc::UnboundedSender<NetworkMessage>>,
     fork_digest: Option<[u8; 4]>
@@ -111,7 +113,12 @@ struct Client {
 
 impl Client {
     pub fn new() -> Self {
+        let output_dir = match dirs::home_dir() {
+            Some(path) => path.to_str().unwrap_or_default().to_string() + "/.imp",
+            None => "./.imp".to_string(),
+        };
         Client {
+            output_dir: output_dir.to_string(),
             num_records: Cell::new(0),
             network_send: None,
             fork_digest: None
@@ -126,7 +133,7 @@ impl Client {
                     .write(true)
                     .create(true)
                     .append(false)
-                    .open("/Users/jonny/.imp/gossip.csv")
+                    .open(self.output_dir.clone() + "gossip.csv")
                     .unwrap();
                 csv::WriterBuilder::new()
                     .has_headers(true)
@@ -138,7 +145,7 @@ impl Client {
                     .write(true)
                     .create(true)
                     .append(true)
-                    .open("/Users/jonny/.imp/gossip.csv")
+                    .open(self.output_dir.clone() + "gossip.csv")
                     .unwrap();
                 csv::WriterBuilder::new()
                     .has_headers(false)
@@ -269,6 +276,7 @@ impl Adapter {
         platform: String,
         protocol_version: String,
         testnet_dir: Option<PathBuf>,
+        mut enrs: Vec<String>,
         arg_matches: &ArgMatches<'_>,
         log: slog::Logger,
     ) -> Self {
@@ -289,7 +297,7 @@ impl Adapter {
 
         // NOTE:  The reason the bootnode must be parsed form the CLI instead of using the Enr type
         // from mothra directly is bc Enr is defined in both Mothra and LH (which is a problem)
-        let boot_nodes: Vec<String> = if mothra_arg_matches.is_present("boot-nodes") {
+        let mut boot_nodes: Vec<String> = if mothra_arg_matches.is_present("boot-nodes") {
             let boot_enr_str = mothra_arg_matches.value_of("boot-nodes").unwrap();
             boot_enr_str
                 .split(',')
@@ -298,6 +306,8 @@ impl Adapter {
         } else {
             Default::default()
         };
+
+        boot_nodes.append(&mut enrs);
 
         let mut config = Mothra::get_config(
             Some(client_name),
