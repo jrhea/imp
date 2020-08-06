@@ -7,6 +7,7 @@ use p2p;
 use slog::{debug, info, o, trace, warn};
 use std::path::PathBuf;
 use std::thread::sleep;
+use std::fs;
 use tokio::sync::watch;
 use tokio::{signal, time::timeout, time::Duration};
 use types::events::Events;
@@ -36,6 +37,13 @@ fn main() -> Result<(), std::io::Error> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("enr-file")
+                .long("enr-file")
+                .value_name("FILE")
+                .help("The /path/to/enr.txt")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("debug-level")
                 .long("debug-level")
                 .value_name("LEVEL")
@@ -53,6 +61,16 @@ fn main() -> Result<(), std::io::Error> {
     let mut testnet_dir = None;
     if let Some(testnet_dir_str) = arg_matches.value_of("testnet-dir") {
         testnet_dir = Some(PathBuf::from(testnet_dir_str));
+    }
+
+    let mut enrs = vec![];
+    if let Some(enr_file) = arg_matches.value_of("enr-file") {
+        let mut enrs_string = fs::read_to_string(enr_file)?;
+        enrs.append(
+            &mut enrs_string.split(',')
+            .map(|x| x.into())
+            .collect::<Vec<String>>()
+        )
     }
 
     // default to this debug-level value.
@@ -77,6 +95,7 @@ fn main() -> Result<(), std::io::Error> {
         platform,
         p2p_protocol_version.into(),
         testnet_dir,
+        enrs,
         &arg_matches,
         log.new(o!("imp" => "NetworkService")),
     );
