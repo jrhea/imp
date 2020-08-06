@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd ../../clients/lighthouse/scripts/local_testnet/
-./validator_client.sh debug
+./../../clients/lighthouse/target/release/lcli insecure-validators --count 8 --validators-dir  ~/.lighthouse/validators  --secrets-dir ~/.lighthouse/secrets
+./../../clients/lighthouse/target/release/lighthouse vc --testnet-dir ~/.lighthouse/testnet 
