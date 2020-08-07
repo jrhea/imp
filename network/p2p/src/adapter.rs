@@ -133,7 +133,7 @@ impl Client {
                     .write(true)
                     .create(true)
                     .append(false)
-                    .open(self.output_dir.clone() + "gossip.csv")
+                    .open(self.output_dir.clone() + "/gossip.csv")
                     .unwrap();
                 csv::WriterBuilder::new()
                     .has_headers(true)
@@ -145,7 +145,7 @@ impl Client {
                     .write(true)
                     .create(true)
                     .append(true)
-                    .open(self.output_dir.clone() + "gossip.csv")
+                    .open(self.output_dir.clone() + "/gossip.csv")
                     .unwrap();
                 csv::WriterBuilder::new()
                     .has_headers(false)
