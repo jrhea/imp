@@ -62,6 +62,9 @@ elif [ $NETWORK = "lighthouse-attack" ]; then
 elif [ $NETWORK = "teku-attack" ]; then
     FORK_DIGEST=157d3034
     BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/teku-attack-0/lighthouse-testnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
+elif [ $NETWORK = "mc-attack" ]; then
+    FORK_DIGEST=2e44918e
+    BOOTSTRAP_BOOTNODES=-LK4QC4pexs3ghjGOItTkTttDiow--WuQqjtieE0YRVKxnvHWAUjt2GKH8-WRDoj8ZSOIBJodAWG-ZftKOPwqTK8QtxBh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhDZBuWeJc2VjcDI1NmsxoQOuTMWhnh6C8oEcCNEyLueXHOJD4zsZr06rGRFC-pbDzIN0Y3CCIyiDdWRwgiMo,-LK4QGaMPlU00DocKfM4ciAnzn44SWYfDNw0Vk2nVj8Uv7r8KEhO_wqbHzEWAzBpjuQLBIwXj91sQCHFR_kDMglcf4IGh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhDRBowiJc2VjcDI1NmsxoQLNz5fvAiF0KiVdV9YU_AucPRlA9vtgaCfpxpiA9MSrB4N0Y3CCIyiDdWRwgiMo,-LK4QKT94GydM4k0rV9LNIQn3vGwn8qO8Osh-3wSV970M241IT7hCG17Vzv5fiMAJ95b4v6Pkp814X0OAc-SWzM7pnAEh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhAMZfQmJc2VjcDI1NmsxoQKVusiPi55UDoIJS6R0A_wiygNr4ZK-vbYWwoJ6Fbb4E4N0Y3CCIyiDdWRwgiMo
 else
     echo network $NETWORK "not supported"
     exit 1
