@@ -55,16 +55,20 @@ elif [ $NETWORK = "medalla" ]; then
     BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/goerli/medalla/master/medalla/bootnodes.txt | grep "enr:" | sed -e "s/^enr:/,/" | tr -d "\n" | tr -d "\r" |sed -e "s/^,//g")
 elif [ $NETWORK = "prysm-attack" ]; then
     FORK_DIGEST=c354a54a
-    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/prysm-attack-0/lighthouse-tesnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/beta-0/prysm-attack-0/lighthouse/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
 elif [ $NETWORK = "lighthouse-attack" ]; then
     FORK_DIGEST=80e1769b
-    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/lighthouse-attack-0/lighthouse-testnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/beta-0/lighthouse-attack-0/lighthouse/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
 elif [ $NETWORK = "teku-attack" ]; then
     FORK_DIGEST=157d3034
-    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/teku-attack-0/lighthouse-testnet/boot_enr.yaml | grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
+    BOOTSTRAP_BOOTNODES=$(curl -s https://raw.githubusercontent.com/ethereum/public-attacknets/master/attacknets/beta-0/teku-attack-0/lighthouse/boot_enr.yaml| grep "enr:" | sed -e "s/^- enr://" | tr "\n" "," |sed -e "s/,$//g")
+    #BOOTSTRAP_BOOTNODES=-LK4QFqcQToZriXkTP-_oP1sVIXoynwTWG5yBrTUw2v04kDqcWEISm5pKrX7q2gVj3fetOENcJ-nFOIKxIKFYa78R2kQh2F0dG5ldHOIerk4dAIt-SeEZXRoMpAVfTA0AAAAAP__________gmlkgnY0gmlwhA1yJbCJc2VjcDI1NmsxoQOirrUOnSvlsumnw9K-ZZElP5fmBph8j2uA0HuqU9lHuIN0Y3CCIyiDdWRwgiMo
 elif [ $NETWORK = "mc-attack" ]; then
     FORK_DIGEST=2e44918e
     BOOTSTRAP_BOOTNODES=-LK4QC4pexs3ghjGOItTkTttDiow--WuQqjtieE0YRVKxnvHWAUjt2GKH8-WRDoj8ZSOIBJodAWG-ZftKOPwqTK8QtxBh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhDZBuWeJc2VjcDI1NmsxoQOuTMWhnh6C8oEcCNEyLueXHOJD4zsZr06rGRFC-pbDzIN0Y3CCIyiDdWRwgiMo,-LK4QGaMPlU00DocKfM4ciAnzn44SWYfDNw0Vk2nVj8Uv7r8KEhO_wqbHzEWAzBpjuQLBIwXj91sQCHFR_kDMglcf4IGh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhDRBowiJc2VjcDI1NmsxoQLNz5fvAiF0KiVdV9YU_AucPRlA9vtgaCfpxpiA9MSrB4N0Y3CCIyiDdWRwgiMo,-LK4QKT94GydM4k0rV9LNIQn3vGwn8qO8Osh-3wSV970M241IT7hCG17Vzv5fiMAJ95b4v6Pkp814X0OAc-SWzM7pnAEh2F0dG5ldHOI__________-EZXRoMpAuRJGOAACwHf__________gmlkgnY0gmlwhAMZfQmJc2VjcDI1NmsxoQKVusiPi55UDoIJS6R0A_wiygNr4ZK-vbYWwoJ6Fbb4E4N0Y3CCIyiDdWRwgiMo
+elif [ $NETWORK = "ad-hoc" ]; then
+    FORK_DIGEST=a2ec54bd
+    BOOTSTRAP_BOOTNODES=-LK4QI-uUnpZRDPrqcCHNbriK0MhS3DUAPyCHTTrIJ2VlFUTCQ4gMqN9cU7j0M-lGOuejIyHtZ6FIJqyQXKVENNqeqUBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpCi7FS9AAAAAP__________gmlkgnY0gmlwhH8AAAGJc2VjcDI1NmsxoQPkffo8ZFXvYkkQkUTjTSL73ZBa9-qm8yySp6aW4LhsKYN0Y3CCIymDdWRwgiM
 else
     echo network $NETWORK "not supported"
     exit 1

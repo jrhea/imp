@@ -13,6 +13,6 @@ Cargo.lock
 .rustc_info.json
 **/.DS_Store
 *.log
-scripts/junk
+scripts/data
 .schlesi/
 .topaz/
