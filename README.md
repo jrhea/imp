@@ -1,5 +1,7 @@
 # Imp: 😈 Eth2 Network Agent 😈
 
+## WARNING:  REPO IS CURRENTLY NOT BEING MAINTAINED
+
 **Imp** is a semi-autonomous network agent designed to crawl the eth2 network an collect data that will be used to monitor the network health in realtime.
 
 **WARNING** Code is not in a stable state.  The project is used for adhoc data collection and will NOT be easy to get working.  Sorry...I haven't decided what the long term plans are.
